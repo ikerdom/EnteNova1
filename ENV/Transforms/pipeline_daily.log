@@ -1,0 +1,818 @@
+
+##########################################################################################
+PIPELINE START 2026-01-21T16:16:21.344944+01:00
+
+==========================================================================================
+[2026-01-21T16:16:21.344944+01:00] RUN: C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\.venv\Scripts\python.exe -X utf8 C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\Transforms\daily_export_albaran_cabecera_api_to_xlsx.py
+[INFO] FECHA_DESDE usada: 20-01-2026
+[INFO] ENDPOINT: http://app.cloud-ia.es:8080/ords/cloudia_integracion_ia/albaranes/empresa/4/fecha/20-01-2026
+[INFO] Descargando offset=0 ...
+[INFO] Nuevos en esta pagina: 25 | Repetidos: 0 | Total nuevos: 25
+[INFO] Descargando offset=25 ...
+[INFO] Nuevos en esta pagina: 25 | Repetidos: 0 | Total nuevos: 50
+[INFO] Descargando offset=50 ...
+[INFO] Nuevos en esta pagina: 12 | Repetidos: 0 | Total nuevos: 62
+[INFO] Ultima pagina.
+Traceback (most recent call last):
+  File "C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\Transforms\daily_export_albaran_cabecera_api_to_xlsx.py", line 281, in <module>
+    export_to_xlsx()
+  File "C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\Transforms\daily_export_albaran_cabecera_api_to_xlsx.py", line 269, in export_to_xlsx
+    with pd.ExcelWriter(OUTPUT_DAILY_XLSX, engine="openpyxl") as writer:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\.venv\Lib\site-packages\pandas\io\excel\_openpyxl.py", line 57, in __init__
+    from openpyxl.workbook import Workbook
+ModuleNotFoundError: No module named 'openpyxl'
+
+##########################################################################################
+PIPELINE START 2026-01-21T16:24:16.588986+01:00
+
+==========================================================================================
+[2026-01-21T16:24:16.588986+01:00] RUN: C:\Users\idomi\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\Transforms\daily_export_albaran_cabecera_api_to_xlsx.py
+[INFO] FECHA_DESDE usada: 20-01-2026
+[INFO] ENDPOINT: http://app.cloud-ia.es:8080/ords/cloudia_integracion_ia/albaranes/empresa/4/fecha/20-01-2026
+[INFO] Descargando offset=0 ...
+[INFO] Nuevos en esta pagina: 25 | Repetidos: 0 | Total nuevos: 25
+[INFO] Descargando offset=25 ...
+[INFO] Nuevos en esta pagina: 25 | Repetidos: 0 | Total nuevos: 50
+[INFO] Descargando offset=50 ...
+[INFO] Nuevos en esta pagina: 12 | Repetidos: 0 | Total nuevos: 62
+[INFO] Ultima pagina.
+[OK] DAILY generado: ALBARANES_CABECERA_DAILY_DEL_DIA.xlsx | filas: 62 | hoja: ALBARAN_CABECERA
+[OK] GLOBAL actualizado: ALBARANES_CABECERA_GLOBAL.xlsx | filas: 62 | hoja: ALBARAN_CABECERA
+
+==========================================================================================
+[2026-01-21T16:24:34.620672+01:00] RUN: C:\Users\idomi\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\Transforms\load_albaran_from_api_xlsx_v5_upsert_merge_skip_nulls_daily.py
+[INFO] Preparados: 62 albaranes (UPSERT merge, sin pisar con NULLs, sin tocar FKs)
+[OK]  Lote 1 | 62/62
+[OK] UPSERT COMPLETADO (merge-duplicates, triggers intactos)
+
+==========================================================================================
+[2026-01-21T16:24:39.205151+01:00] RUN: C:\Users\idomi\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\Transforms\daily_export_albaran_linea_detalle_from_cabecera_xlsx_2026.py
+[INFO] Albaranes en cabecera: 62
+[INFO] (1/62) Descargando lineas de albaran_id=679336
+   [INFO] Nuevas: 3 | Repetidas: 0 | Total albaran: 3
+[INFO] (2/62) Descargando lineas de albaran_id=679340
+   [INFO] Nuevas: 6 | Repetidas: 0 | Total albaran: 6
+[INFO] (3/62) Descargando lineas de albaran_id=679345
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (4/62) Descargando lineas de albaran_id=679349
+   [INFO] Nuevas: 4 | Repetidas: 0 | Total albaran: 4
+[INFO] (5/62) Descargando lineas de albaran_id=679353
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (6/62) Descargando lineas de albaran_id=679357
+   [INFO] Nuevas: 4 | Repetidas: 0 | Total albaran: 4
+[INFO] (7/62) Descargando lineas de albaran_id=679362
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (8/62) Descargando lineas de albaran_id=679366
+   [INFO] Nuevas: 6 | Repetidas: 0 | Total albaran: 6
+[INFO] (9/62) Descargando lineas de albaran_id=679370
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (10/62) Descargando lineas de albaran_id=679374
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (11/62) Descargando lineas de albaran_id=679378
+   [INFO] Nuevas: 6 | Repetidas: 0 | Total albaran: 6
+[INFO] (12/62) Descargando lineas de albaran_id=679382
+   [INFO] Nuevas: 9 | Repetidas: 0 | Total albaran: 9
+[INFO] (13/62) Descargando lineas de albaran_id=679386
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (14/62) Descargando lineas de albaran_id=679392
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (15/62) Descargando lineas de albaran_id=679396
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (16/62) Descargando lineas de albaran_id=679400
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (17/62) Descargando lineas de albaran_id=679404
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (18/62) Descargando lineas de albaran_id=679408
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (19/62) Descargando lineas de albaran_id=679418
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (20/62) Descargando lineas de albaran_id=679433
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (21/62) Descargando lineas de albaran_id=679437
+   [INFO] Nuevas: 8 | Repetidas: 0 | Total albaran: 8
+[INFO] (22/62) Descargando lineas de albaran_id=679441
+   [INFO] Nuevas: 4 | Repetidas: 0 | Total albaran: 4
+[INFO] (23/62) Descargando lineas de albaran_id=679445
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (24/62) Descargando lineas de albaran_id=679454
+   [INFO] Nuevas: 4 | Repetidas: 0 | Total albaran: 4
+[INFO] (25/62) Descargando lineas de albaran_id=679468
+   [INFO] Nuevas: 25 | Repetidas: 0 | Total albaran: 25
+   [INFO] Nuevas: 3 | Repetidas: 0 | Total albaran: 28
+[INFO] (26/62) Descargando lineas de albaran_id=679477
+   [INFO] Nuevas: 5 | Repetidas: 0 | Total albaran: 5
+[INFO] (27/62) Descargando lineas de albaran_id=679481
+   [INFO] Nuevas: 5 | Repetidas: 0 | Total albaran: 5
+[INFO] (28/62) Descargando lineas de albaran_id=679499
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (29/62) Descargando lineas de albaran_id=679503
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (30/62) Descargando lineas de albaran_id=679509
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (31/62) Descargando lineas de albaran_id=679516
+   [INFO] Nuevas: 6 | Repetidas: 0 | Total albaran: 6
+[INFO] (32/62) Descargando lineas de albaran_id=679520
+   [INFO] Nuevas: 4 | Repetidas: 0 | Total albaran: 4
+[INFO] (33/62) Descargando lineas de albaran_id=679526
+   [INFO] Nuevas: 3 | Repetidas: 0 | Total albaran: 3
+[INFO] (34/62) Descargando lineas de albaran_id=679528
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (35/62) Descargando lineas de albaran_id=679529
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (36/62) Descargando lineas de albaran_id=679539
+   [INFO] Nuevas: 14 | Repetidas: 0 | Total albaran: 14
+[INFO] (37/62) Descargando lineas de albaran_id=679543
+   [INFO] Nuevas: 3 | Repetidas: 0 | Total albaran: 3
+[INFO] (38/62) Descargando lineas de albaran_id=679547
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (39/62) Descargando lineas de albaran_id=679551
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (40/62) Descargando lineas de albaran_id=679555
+   [INFO] Nuevas: 8 | Repetidas: 0 | Total albaran: 8
+[INFO] (41/62) Descargando lineas de albaran_id=679559
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (42/62) Descargando lineas de albaran_id=679563
+   [INFO] Nuevas: 6 | Repetidas: 0 | Total albaran: 6
+[INFO] (43/62) Descargando lineas de albaran_id=679567
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (44/62) Descargando lineas de albaran_id=679571
+   [INFO] Nuevas: 3 | Repetidas: 0 | Total albaran: 3
+[INFO] (45/62) Descargando lineas de albaran_id=679575
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (46/62) Descargando lineas de albaran_id=679583
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (47/62) Descargando lineas de albaran_id=679593
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (48/62) Descargando lineas de albaran_id=679597
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (49/62) Descargando lineas de albaran_id=679600
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (50/62) Descargando lineas de albaran_id=679605
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (51/62) Descargando lineas de albaran_id=679609
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (52/62) Descargando lineas de albaran_id=679613
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (53/62) Descargando lineas de albaran_id=679617
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (54/62) Descargando lineas de albaran_id=679623
+   [INFO] Nuevas: 6 | Repetidas: 0 | Total albaran: 6
+[INFO] (55/62) Descargando lineas de albaran_id=679627
+   [INFO] Nuevas: 7 | Repetidas: 0 | Total albaran: 7
+[INFO] (56/62) Descargando lineas de albaran_id=679631
+   [INFO] Nuevas: 8 | Repetidas: 0 | Total albaran: 8
+[INFO] (57/62) Descargando lineas de albaran_id=679636
+   [INFO] Nuevas: 5 | Repetidas: 0 | Total albaran: 5
+[INFO] (58/62) Descargando lineas de albaran_id=679640
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (59/62) Descargando lineas de albaran_id=679644
+   [INFO] Nuevas: 6 | Repetidas: 0 | Total albaran: 6
+[INFO] (60/62) Descargando lineas de albaran_id=679650
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (61/62) Descargando lineas de albaran_id=679654
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (62/62) Descargando lineas de albaran_id=679661
+   [INFO] Nuevas: 12 | Repetidas: 0 | Total albaran: 12
+[OK] DAILY generado: ALBARANES_LINEA_DAILY_DEL_DIA.xlsx | filas: 236 | hoja: ALBARAN_LINEA
+[OK] GLOBAL actualizado: ALBARANES_LINEA_GLOBAL.xlsx | filas: 236 | hoja: ALBARAN_LINEA
+
+==========================================================================================
+[2026-01-21T16:24:46.897922+01:00] RUN: C:\Users\idomi\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\Transforms\load_albaran_linea_from_xlsx_v1_insert_only_skip_existing.py
+[INFO] Preparadas: 236 lineas con PK (sin tocar FKs)
+[INFO] Ya existen en BD: 113 lineas
+[INFO] Nuevas a insertar: 123
+[OK]  Lote 1 | 123/123
+[OK] INSERT-ONLY COMPLETADO (sin tocar registros existentes)
+
+##########################################################################################
+PIPELINE START 2026-01-21T16:25:03.371168+01:00
+
+==========================================================================================
+[2026-01-21T16:25:03.371168+01:00] RUN: C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\.venv\Scripts\python.exe -X utf8 C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\Transforms\daily_export_albaran_cabecera_api_to_xlsx.py
+[INFO] Volcando DAILY anterior al GLOBAL: ALBARANES_CABECERA_DAILY_DEL_DIA.xlsx (62 filas)
+[OK] GLOBAL actualizado: ALBARANES_CABECERA_GLOBAL.xlsx | filas: 62 | hoja: ALBARAN_CABECERA
+[INFO] FECHA_DESDE usada: 20-01-2026
+[INFO] ENDPOINT: http://app.cloud-ia.es:8080/ords/cloudia_integracion_ia/albaranes/empresa/4/fecha/20-01-2026
+[INFO] Descargando offset=0 ...
+[INFO] Nuevos en esta pagina: 25 | Repetidos: 0 | Total nuevos: 25
+[INFO] Descargando offset=25 ...
+[INFO] Nuevos en esta pagina: 25 | Repetidos: 0 | Total nuevos: 50
+[INFO] Descargando offset=50 ...
+[INFO] Nuevos en esta pagina: 13 | Repetidos: 0 | Total nuevos: 63
+[INFO] Ultima pagina.
+[OK] DAILY generado: ALBARANES_CABECERA_DAILY_DEL_DIA.xlsx | filas: 63 | hoja: ALBARAN_CABECERA
+[OK] GLOBAL actualizado: ALBARANES_CABECERA_GLOBAL.xlsx | filas: 63 | hoja: ALBARAN_CABECERA
+
+==========================================================================================
+[2026-01-21T16:25:08.975913+01:00] RUN: C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\.venv\Scripts\python.exe -X utf8 C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\Transforms\load_albaran_from_api_xlsx_v5_upsert_merge_skip_nulls_daily.py
+[INFO] Preparados: 63 albaranes (UPSERT merge, sin pisar con NULLs, sin tocar FKs)
+[OK]  Lote 1 | 63/63
+[OK] UPSERT COMPLETADO (merge-duplicates, triggers intactos)
+
+==========================================================================================
+[2026-01-21T16:25:12.364205+01:00] RUN: C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\.venv\Scripts\python.exe -X utf8 C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\Transforms\daily_export_albaran_linea_detalle_from_cabecera_xlsx_2026.py
+[INFO] Albaranes en cabecera: 63
+[INFO] Volcando DAILY anterior al GLOBAL: ALBARANES_LINEA_DAILY_DEL_DIA.xlsx (236 filas)
+[OK] GLOBAL actualizado: ALBARANES_LINEA_GLOBAL.xlsx | filas: 236 | hoja: ALBARAN_LINEA
+[INFO] (1/63) Descargando lineas de albaran_id=679336
+   [INFO] Nuevas: 3 | Repetidas: 0 | Total albaran: 3
+[INFO] (2/63) Descargando lineas de albaran_id=679340
+   [INFO] Nuevas: 6 | Repetidas: 0 | Total albaran: 6
+[INFO] (3/63) Descargando lineas de albaran_id=679345
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (4/63) Descargando lineas de albaran_id=679349
+   [INFO] Nuevas: 4 | Repetidas: 0 | Total albaran: 4
+[INFO] (5/63) Descargando lineas de albaran_id=679353
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (6/63) Descargando lineas de albaran_id=679357
+   [INFO] Nuevas: 4 | Repetidas: 0 | Total albaran: 4
+[INFO] (7/63) Descargando lineas de albaran_id=679362
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (8/63) Descargando lineas de albaran_id=679366
+   [INFO] Nuevas: 6 | Repetidas: 0 | Total albaran: 6
+[INFO] (9/63) Descargando lineas de albaran_id=679370
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (10/63) Descargando lineas de albaran_id=679374
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (11/63) Descargando lineas de albaran_id=679378
+   [INFO] Nuevas: 6 | Repetidas: 0 | Total albaran: 6
+[INFO] (12/63) Descargando lineas de albaran_id=679382
+   [INFO] Nuevas: 9 | Repetidas: 0 | Total albaran: 9
+[INFO] (13/63) Descargando lineas de albaran_id=679386
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (14/63) Descargando lineas de albaran_id=679392
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (15/63) Descargando lineas de albaran_id=679396
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (16/63) Descargando lineas de albaran_id=679400
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (17/63) Descargando lineas de albaran_id=679404
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (18/63) Descargando lineas de albaran_id=679408
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (19/63) Descargando lineas de albaran_id=679418
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (20/63) Descargando lineas de albaran_id=679433
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (21/63) Descargando lineas de albaran_id=679437
+   [INFO] Nuevas: 8 | Repetidas: 0 | Total albaran: 8
+[INFO] (22/63) Descargando lineas de albaran_id=679441
+   [INFO] Nuevas: 4 | Repetidas: 0 | Total albaran: 4
+[INFO] (23/63) Descargando lineas de albaran_id=679445
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (24/63) Descargando lineas de albaran_id=679454
+   [INFO] Nuevas: 4 | Repetidas: 0 | Total albaran: 4
+[INFO] (25/63) Descargando lineas de albaran_id=679468
+   [INFO] Nuevas: 25 | Repetidas: 0 | Total albaran: 25
+   [INFO] Nuevas: 3 | Repetidas: 0 | Total albaran: 28
+[INFO] (26/63) Descargando lineas de albaran_id=679477
+   [INFO] Nuevas: 5 | Repetidas: 0 | Total albaran: 5
+[INFO] (27/63) Descargando lineas de albaran_id=679481
+   [INFO] Nuevas: 5 | Repetidas: 0 | Total albaran: 5
+[INFO] (28/63) Descargando lineas de albaran_id=679499
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (29/63) Descargando lineas de albaran_id=679503
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (30/63) Descargando lineas de albaran_id=679509
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (31/63) Descargando lineas de albaran_id=679516
+   [INFO] Nuevas: 6 | Repetidas: 0 | Total albaran: 6
+[INFO] (32/63) Descargando lineas de albaran_id=679520
+   [INFO] Nuevas: 4 | Repetidas: 0 | Total albaran: 4
+[INFO] (33/63) Descargando lineas de albaran_id=679526
+   [INFO] Nuevas: 3 | Repetidas: 0 | Total albaran: 3
+[INFO] (34/63) Descargando lineas de albaran_id=679528
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (35/63) Descargando lineas de albaran_id=679529
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (36/63) Descargando lineas de albaran_id=679539
+   [INFO] Nuevas: 14 | Repetidas: 0 | Total albaran: 14
+[INFO] (37/63) Descargando lineas de albaran_id=679543
+   [INFO] Nuevas: 3 | Repetidas: 0 | Total albaran: 3
+[INFO] (38/63) Descargando lineas de albaran_id=679547
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (39/63) Descargando lineas de albaran_id=679551
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (40/63) Descargando lineas de albaran_id=679555
+   [INFO] Nuevas: 8 | Repetidas: 0 | Total albaran: 8
+[INFO] (41/63) Descargando lineas de albaran_id=679559
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (42/63) Descargando lineas de albaran_id=679563
+   [INFO] Nuevas: 6 | Repetidas: 0 | Total albaran: 6
+[INFO] (43/63) Descargando lineas de albaran_id=679567
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (44/63) Descargando lineas de albaran_id=679571
+   [INFO] Nuevas: 3 | Repetidas: 0 | Total albaran: 3
+[INFO] (45/63) Descargando lineas de albaran_id=679575
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (46/63) Descargando lineas de albaran_id=679583
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (47/63) Descargando lineas de albaran_id=679593
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (48/63) Descargando lineas de albaran_id=679597
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (49/63) Descargando lineas de albaran_id=679600
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (50/63) Descargando lineas de albaran_id=679605
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (51/63) Descargando lineas de albaran_id=679609
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (52/63) Descargando lineas de albaran_id=679613
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (53/63) Descargando lineas de albaran_id=679617
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (54/63) Descargando lineas de albaran_id=679623
+   [INFO] Nuevas: 6 | Repetidas: 0 | Total albaran: 6
+[INFO] (55/63) Descargando lineas de albaran_id=679627
+   [INFO] Nuevas: 7 | Repetidas: 0 | Total albaran: 7
+[INFO] (56/63) Descargando lineas de albaran_id=679631
+   [INFO] Nuevas: 8 | Repetidas: 0 | Total albaran: 8
+[INFO] (57/63) Descargando lineas de albaran_id=679636
+   [INFO] Nuevas: 5 | Repetidas: 0 | Total albaran: 5
+[INFO] (58/63) Descargando lineas de albaran_id=679640
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (59/63) Descargando lineas de albaran_id=679644
+   [INFO] Nuevas: 6 | Repetidas: 0 | Total albaran: 6
+[INFO] (60/63) Descargando lineas de albaran_id=679650
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (61/63) Descargando lineas de albaran_id=679654
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (62/63) Descargando lineas de albaran_id=679661
+   [INFO] Nuevas: 12 | Repetidas: 0 | Total albaran: 12
+[INFO] (63/63) Descargando lineas de albaran_id=679682
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[OK] DAILY generado: ALBARANES_LINEA_DAILY_DEL_DIA.xlsx | filas: 237 | hoja: ALBARAN_LINEA
+[OK] GLOBAL actualizado: ALBARANES_LINEA_GLOBAL.xlsx | filas: 237 | hoja: ALBARAN_LINEA
+
+==========================================================================================
+[2026-01-21T16:25:19.589234+01:00] RUN: C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\.venv\Scripts\python.exe -X utf8 C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\Transforms\load_albaran_linea_from_xlsx_v1_insert_only_skip_existing.py
+[INFO] Preparadas: 237 lineas con PK (sin tocar FKs)
+[INFO] Ya existen en BD: 236 lineas
+[INFO] Nuevas a insertar: 1
+[OK]  Lote 1 | 1/1
+[OK] INSERT-ONLY COMPLETADO (sin tocar registros existentes)
+
+##########################################################################################
+PIPELINE START 2026-01-22T13:14:12.266619+01:00
+
+==========================================================================================
+[2026-01-22T13:14:12.268614+01:00] RUN: C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\.venv\Scripts\python.exe -X utf8 C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\Transforms\daily_export_albaran_cabecera_api_to_xlsx.py
+[INFO] Volcando DAILY anterior al GLOBAL: ALBARANES_CABECERA_DAILY_DEL_DIA.xlsx (63 filas)
+[OK] GLOBAL actualizado: ALBARANES_CABECERA_GLOBAL.xlsx | filas: 63 | hoja: ALBARAN_CABECERA
+[INFO] FECHA_DESDE usada: 21-01-2026
+[INFO] ENDPOINT: http://app.cloud-ia.es:8080/ords/cloudia_integracion_ia/albaranes/empresa/4/fecha/21-01-2026
+[INFO] Descargando offset=0 ...
+[INFO] Nuevos en esta pagina: 25 | Repetidos: 0 | Total nuevos: 25
+[INFO] Descargando offset=25 ...
+[INFO] Nuevos en esta pagina: 25 | Repetidos: 0 | Total nuevos: 50
+[INFO] Descargando offset=50 ...
+[INFO] Nuevos en esta pagina: 4 | Repetidos: 0 | Total nuevos: 54
+[INFO] Ultima pagina.
+[OK] DAILY generado: ALBARANES_CABECERA_DAILY_DEL_DIA.xlsx | filas: 54 | hoja: ALBARAN_CABECERA
+[OK] GLOBAL actualizado: ALBARANES_CABECERA_GLOBAL.xlsx | filas: 96 | hoja: ALBARAN_CABECERA
+
+==========================================================================================
+[2026-01-22T13:14:20.088324+01:00] RUN: C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\.venv\Scripts\python.exe -X utf8 C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\Transforms\load_albaran_from_api_xlsx_v5_upsert_merge_skip_nulls_daily.py
+[INFO] Preparados: 54 albaranes (UPSERT merge, sin pisar con NULLs, sin tocar FKs)
+[OK]  Lote 1 | 54/54
+[OK] UPSERT COMPLETADO (merge-duplicates, triggers intactos)
+
+==========================================================================================
+[2026-01-22T13:14:24.683692+01:00] RUN: C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\.venv\Scripts\python.exe -X utf8 C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\Transforms\daily_export_albaran_linea_detalle_from_cabecera_xlsx_2026.py
+[INFO] Albaranes en cabecera: 54
+[INFO] Volcando DAILY anterior al GLOBAL: ALBARANES_LINEA_DAILY_DEL_DIA.xlsx (237 filas)
+[OK] GLOBAL actualizado: ALBARANES_LINEA_GLOBAL.xlsx | filas: 237 | hoja: ALBARAN_LINEA
+[INFO] (1/54) Descargando lineas de albaran_id=679567
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (2/54) Descargando lineas de albaran_id=679571
+   [INFO] Nuevas: 3 | Repetidas: 0 | Total albaran: 3
+[INFO] (3/54) Descargando lineas de albaran_id=679575
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (4/54) Descargando lineas de albaran_id=679583
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (5/54) Descargando lineas de albaran_id=679593
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (6/54) Descargando lineas de albaran_id=679597
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (7/54) Descargando lineas de albaran_id=679600
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (8/54) Descargando lineas de albaran_id=679605
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (9/54) Descargando lineas de albaran_id=679609
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (10/54) Descargando lineas de albaran_id=679613
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (11/54) Descargando lineas de albaran_id=679617
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (12/54) Descargando lineas de albaran_id=679623
+   [INFO] Nuevas: 6 | Repetidas: 0 | Total albaran: 6
+[INFO] (13/54) Descargando lineas de albaran_id=679627
+   [INFO] Nuevas: 7 | Repetidas: 0 | Total albaran: 7
+[INFO] (14/54) Descargando lineas de albaran_id=679631
+   [INFO] Nuevas: 8 | Repetidas: 0 | Total albaran: 8
+[INFO] (15/54) Descargando lineas de albaran_id=679636
+   [INFO] Nuevas: 5 | Repetidas: 0 | Total albaran: 5
+[INFO] (16/54) Descargando lineas de albaran_id=679640
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (17/54) Descargando lineas de albaran_id=679644
+   [INFO] Nuevas: 6 | Repetidas: 0 | Total albaran: 6
+[INFO] (18/54) Descargando lineas de albaran_id=679650
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (19/54) Descargando lineas de albaran_id=679654
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (20/54) Descargando lineas de albaran_id=679661
+   [INFO] Nuevas: 12 | Repetidas: 0 | Total albaran: 12
+[INFO] (21/54) Descargando lineas de albaran_id=679682
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (22/54) Descargando lineas de albaran_id=679687
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (23/54) Descargando lineas de albaran_id=679700
+   [INFO] Nuevas: 3 | Repetidas: 0 | Total albaran: 3
+[INFO] (24/54) Descargando lineas de albaran_id=679702
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (25/54) Descargando lineas de albaran_id=679706
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (26/54) Descargando lineas de albaran_id=679710
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (27/54) Descargando lineas de albaran_id=679714
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (28/54) Descargando lineas de albaran_id=679718
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (29/54) Descargando lineas de albaran_id=679722
+   [INFO] Nuevas: 3 | Repetidas: 0 | Total albaran: 3
+[INFO] (30/54) Descargando lineas de albaran_id=679726
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (31/54) Descargando lineas de albaran_id=679730
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (32/54) Descargando lineas de albaran_id=679734
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (33/54) Descargando lineas de albaran_id=679738
+   [INFO] Nuevas: 5 | Repetidas: 0 | Total albaran: 5
+[INFO] (34/54) Descargando lineas de albaran_id=679742
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (35/54) Descargando lineas de albaran_id=679746
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (36/54) Descargando lineas de albaran_id=679756
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (37/54) Descargando lineas de albaran_id=679781
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (38/54) Descargando lineas de albaran_id=679786
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (39/54) Descargando lineas de albaran_id=679792
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (40/54) Descargando lineas de albaran_id=679796
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (41/54) Descargando lineas de albaran_id=679800
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (42/54) Descargando lineas de albaran_id=679804
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (43/54) Descargando lineas de albaran_id=679808
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (44/54) Descargando lineas de albaran_id=679809
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (45/54) Descargando lineas de albaran_id=679816
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (46/54) Descargando lineas de albaran_id=679822
+   [INFO] Nuevas: 3 | Repetidas: 0 | Total albaran: 3
+[INFO] (47/54) Descargando lineas de albaran_id=679826
+   [INFO] Nuevas: 16 | Repetidas: 0 | Total albaran: 16
+[INFO] (48/54) Descargando lineas de albaran_id=679830
+   [INFO] Nuevas: 8 | Repetidas: 0 | Total albaran: 8
+[INFO] (49/54) Descargando lineas de albaran_id=679834
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (50/54) Descargando lineas de albaran_id=679838
+   [INFO] Nuevas: 4 | Repetidas: 0 | Total albaran: 4
+[INFO] (51/54) Descargando lineas de albaran_id=679842
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (52/54) Descargando lineas de albaran_id=679846
+   [INFO] Nuevas: 8 | Repetidas: 0 | Total albaran: 8
+[INFO] (53/54) Descargando lineas de albaran_id=679855
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (54/54) Descargando lineas de albaran_id=679860
+   [INFO] Nuevas: 4 | Repetidas: 0 | Total albaran: 4
+[OK] DAILY generado: ALBARANES_LINEA_DAILY_DEL_DIA.xlsx | filas: 156 | hoja: ALBARAN_LINEA
+[OK] GLOBAL actualizado: ALBARANES_LINEA_GLOBAL.xlsx | filas: 326 | hoja: ALBARAN_LINEA
+
+==========================================================================================
+[2026-01-22T13:14:32.911545+01:00] RUN: C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\.venv\Scripts\python.exe -X utf8 C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\Transforms\load_albaran_linea_from_xlsx_v1_insert_only_skip_existing.py
+[INFO] Preparadas: 156 lineas con PK (sin tocar FKs)
+[INFO] Ya existen en BD: 67 lineas
+[INFO] Nuevas a insertar: 89
+[OK]  Lote 1 | 89/89
+[OK] INSERT-ONLY COMPLETADO (sin tocar registros existentes)
+
+##########################################################################################
+PIPELINE START 2026-01-23T10:43:12.320135+01:00
+
+==========================================================================================
+[2026-01-23T10:43:12.322135+01:00] RUN: C:\Users\idomi\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\Transforms\daily_export_albaran_cabecera_api_to_xlsx.py
+[INFO] Volcando DAILY anterior al GLOBAL: ALBARANES_CABECERA_DAILY_DEL_DIA.xlsx (54 filas)
+[OK] GLOBAL actualizado: ALBARANES_CABECERA_GLOBAL.xlsx | filas: 96 | hoja: ALBARAN_CABECERA
+[INFO] FECHA_DESDE usada: 21-01-2026
+[INFO] ENDPOINT: http://app.cloud-ia.es:8080/ords/cloudia_integracion_ia/albaranes/empresa/4/fecha/21-01-2026
+[INFO] Descargando offset=0 ...
+[INFO] Nuevos en esta pagina: 25 | Repetidos: 0 | Total nuevos: 25
+[INFO] Descargando offset=25 ...
+[INFO] Nuevos en esta pagina: 25 | Repetidos: 0 | Total nuevos: 50
+[INFO] Descargando offset=50 ...
+[INFO] Nuevos en esta pagina: 25 | Repetidos: 0 | Total nuevos: 75
+[INFO] Descargando offset=75 ...
+[INFO] Nuevos en esta pagina: 1 | Repetidos: 0 | Total nuevos: 76
+[INFO] Ultima pagina.
+[OK] DAILY generado: ALBARANES_CABECERA_DAILY_DEL_DIA.xlsx | filas: 76 | hoja: ALBARAN_CABECERA
+[OK] GLOBAL actualizado: ALBARANES_CABECERA_GLOBAL.xlsx | filas: 118 | hoja: ALBARAN_CABECERA
+
+==========================================================================================
+[2026-01-23T10:43:59.304302+01:00] RUN: C:\Users\idomi\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\Transforms\load_albaran_from_api_xlsx_v5_upsert_merge_skip_nulls_daily.py
+[INFO] Preparados: 76 albaranes (UPSERT merge, sin pisar con NULLs, sin tocar FKs)
+[OK]  Lote 1 | 76/76
+[OK] UPSERT COMPLETADO (merge-duplicates, triggers intactos)
+
+==========================================================================================
+[2026-01-23T10:44:08.285618+01:00] RUN: C:\Users\idomi\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\Transforms\daily_export_albaran_linea_detalle_from_cabecera_xlsx_2026.py
+[INFO] Albaranes en cabecera: 76
+[INFO] Volcando DAILY anterior al GLOBAL: ALBARANES_LINEA_DAILY_DEL_DIA.xlsx (156 filas)
+[OK] GLOBAL actualizado: ALBARANES_LINEA_GLOBAL.xlsx | filas: 326 | hoja: ALBARAN_LINEA
+[INFO] (1/76) Descargando lineas de albaran_id=679567
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (2/76) Descargando lineas de albaran_id=679571
+   [INFO] Nuevas: 3 | Repetidas: 0 | Total albaran: 3
+[INFO] (3/76) Descargando lineas de albaran_id=679575
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (4/76) Descargando lineas de albaran_id=679583
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (5/76) Descargando lineas de albaran_id=679593
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (6/76) Descargando lineas de albaran_id=679597
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (7/76) Descargando lineas de albaran_id=679600
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (8/76) Descargando lineas de albaran_id=679605
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (9/76) Descargando lineas de albaran_id=679609
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (10/76) Descargando lineas de albaran_id=679613
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (11/76) Descargando lineas de albaran_id=679617
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (12/76) Descargando lineas de albaran_id=679623
+   [INFO] Nuevas: 6 | Repetidas: 0 | Total albaran: 6
+[INFO] (13/76) Descargando lineas de albaran_id=679627
+   [INFO] Nuevas: 7 | Repetidas: 0 | Total albaran: 7
+[INFO] (14/76) Descargando lineas de albaran_id=679631
+   [INFO] Nuevas: 8 | Repetidas: 0 | Total albaran: 8
+[INFO] (15/76) Descargando lineas de albaran_id=679636
+   [INFO] Nuevas: 5 | Repetidas: 0 | Total albaran: 5
+[INFO] (16/76) Descargando lineas de albaran_id=679640
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (17/76) Descargando lineas de albaran_id=679644
+   [INFO] Nuevas: 6 | Repetidas: 0 | Total albaran: 6
+[INFO] (18/76) Descargando lineas de albaran_id=679650
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (19/76) Descargando lineas de albaran_id=679654
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (20/76) Descargando lineas de albaran_id=679661
+   [INFO] Nuevas: 12 | Repetidas: 0 | Total albaran: 12
+[INFO] (21/76) Descargando lineas de albaran_id=679682
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (22/76) Descargando lineas de albaran_id=679687
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (23/76) Descargando lineas de albaran_id=679700
+   [INFO] Nuevas: 3 | Repetidas: 0 | Total albaran: 3
+[INFO] (24/76) Descargando lineas de albaran_id=679702
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (25/76) Descargando lineas de albaran_id=679706
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (26/76) Descargando lineas de albaran_id=679710
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (27/76) Descargando lineas de albaran_id=679714
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (28/76) Descargando lineas de albaran_id=679718
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (29/76) Descargando lineas de albaran_id=679722
+   [INFO] Nuevas: 3 | Repetidas: 0 | Total albaran: 3
+[INFO] (30/76) Descargando lineas de albaran_id=679726
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (31/76) Descargando lineas de albaran_id=679730
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (32/76) Descargando lineas de albaran_id=679734
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (33/76) Descargando lineas de albaran_id=679738
+   [INFO] Nuevas: 5 | Repetidas: 0 | Total albaran: 5
+[INFO] (34/76) Descargando lineas de albaran_id=679742
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (35/76) Descargando lineas de albaran_id=679746
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (36/76) Descargando lineas de albaran_id=679756
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (37/76) Descargando lineas de albaran_id=679781
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (38/76) Descargando lineas de albaran_id=679786
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (39/76) Descargando lineas de albaran_id=679792
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (40/76) Descargando lineas de albaran_id=679796
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (41/76) Descargando lineas de albaran_id=679800
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (42/76) Descargando lineas de albaran_id=679804
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (43/76) Descargando lineas de albaran_id=679808
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (44/76) Descargando lineas de albaran_id=679809
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (45/76) Descargando lineas de albaran_id=679816
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (46/76) Descargando lineas de albaran_id=679822
+   [INFO] Nuevas: 3 | Repetidas: 0 | Total albaran: 3
+[INFO] (47/76) Descargando lineas de albaran_id=679826
+   [INFO] Nuevas: 16 | Repetidas: 0 | Total albaran: 16
+[INFO] (48/76) Descargando lineas de albaran_id=679830
+   [INFO] Nuevas: 8 | Repetidas: 0 | Total albaran: 8
+[INFO] (49/76) Descargando lineas de albaran_id=679834
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (50/76) Descargando lineas de albaran_id=679838
+   [INFO] Nuevas: 4 | Repetidas: 0 | Total albaran: 4
+[INFO] (51/76) Descargando lineas de albaran_id=679842
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (52/76) Descargando lineas de albaran_id=679846
+   [INFO] Nuevas: 8 | Repetidas: 0 | Total albaran: 8
+[INFO] (53/76) Descargando lineas de albaran_id=679855
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (54/76) Descargando lineas de albaran_id=679860
+   [INFO] Nuevas: 4 | Repetidas: 0 | Total albaran: 4
+[INFO] (55/76) Descargando lineas de albaran_id=679884
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (56/76) Descargando lineas de albaran_id=679888
+   [INFO] Nuevas: 7 | Repetidas: 0 | Total albaran: 7
+[INFO] (57/76) Descargando lineas de albaran_id=679892
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (58/76) Descargando lineas de albaran_id=679896
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (59/76) Descargando lineas de albaran_id=679898
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (60/76) Descargando lineas de albaran_id=679902
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (61/76) Descargando lineas de albaran_id=679920
+   [INFO] Nuevas: 4 | Repetidas: 0 | Total albaran: 4
+[INFO] (62/76) Descargando lineas de albaran_id=679924
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (63/76) Descargando lineas de albaran_id=679932
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (64/76) Descargando lineas de albaran_id=679937
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (65/76) Descargando lineas de albaran_id=679941
+   [INFO] Nuevas: 7 | Repetidas: 0 | Total albaran: 7
+[INFO] (66/76) Descargando lineas de albaran_id=679946
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (67/76) Descargando lineas de albaran_id=679948
+   [INFO] Nuevas: 8 | Repetidas: 0 | Total albaran: 8
+[INFO] (68/76) Descargando lineas de albaran_id=679950
+   [INFO] Nuevas: 10 | Repetidas: 0 | Total albaran: 10
+[INFO] (69/76) Descargando lineas de albaran_id=679955
+   [INFO] Nuevas: 16 | Repetidas: 0 | Total albaran: 16
+[INFO] (70/76) Descargando lineas de albaran_id=679959
+   [INFO] Nuevas: 8 | Repetidas: 0 | Total albaran: 8
+[INFO] (71/76) Descargando lineas de albaran_id=679963
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (72/76) Descargando lineas de albaran_id=679967
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (73/76) Descargando lineas de albaran_id=679971
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (74/76) Descargando lineas de albaran_id=679975
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (75/76) Descargando lineas de albaran_id=679979
+   [INFO] Nuevas: 3 | Repetidas: 0 | Total albaran: 3
+[INFO] (76/76) Descargando lineas de albaran_id=679983
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[OK] DAILY generado: ALBARANES_LINEA_DAILY_DEL_DIA.xlsx | filas: 238 | hoja: ALBARAN_LINEA
+[OK] GLOBAL actualizado: ALBARANES_LINEA_GLOBAL.xlsx | filas: 408 | hoja: ALBARAN_LINEA
+
+==========================================================================================
+[2026-01-23T10:44:22.459864+01:00] RUN: C:\Users\idomi\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\Transforms\load_albaran_linea_from_xlsx_v1_insert_only_skip_existing.py
+[INFO] Preparadas: 238 lineas con PK (sin tocar FKs)
+[INFO] Ya existen en BD: 156 lineas
+[INFO] Nuevas a insertar: 82
+[OK]  Lote 1 | 82/82
+[OK] INSERT-ONLY COMPLETADO (sin tocar registros existentes)
+
+##########################################################################################
+PIPELINE START 2026-01-23T10:44:28.107087+01:00
+
+==========================================================================================
+[2026-01-23T10:44:28.107542+01:00] RUN: C:\Users\idomi\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\Transforms\daily_export_albaran_cabecera_api_to_xlsx.py
+[INFO] Volcando DAILY anterior al GLOBAL: ALBARANES_CABECERA_DAILY_DEL_DIA.xlsx (76 filas)
+[OK] GLOBAL actualizado: ALBARANES_CABECERA_GLOBAL.xlsx | filas: 118 | hoja: ALBARAN_CABECERA
+[INFO] FECHA_DESDE usada: 22-01-2026
+[INFO] ENDPOINT: http://app.cloud-ia.es:8080/ords/cloudia_integracion_ia/albaranes/empresa/4/fecha/22-01-2026
+[INFO] Descargando offset=0 ...
+[INFO] Nuevos en esta pagina: 25 | Repetidos: 0 | Total nuevos: 25
+[INFO] Descargando offset=25 ...
+[INFO] Nuevos en esta pagina: 16 | Repetidos: 0 | Total nuevos: 41
+[INFO] Ultima pagina.
+[OK] DAILY generado: ALBARANES_CABECERA_DAILY_DEL_DIA.xlsx | filas: 41 | hoja: ALBARAN_CABECERA
+[OK] GLOBAL actualizado: ALBARANES_CABECERA_GLOBAL.xlsx | filas: 118 | hoja: ALBARAN_CABECERA
+
+==========================================================================================
+[2026-01-23T10:44:33.887792+01:00] RUN: C:\Users\idomi\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\Transforms\load_albaran_from_api_xlsx_v5_upsert_merge_skip_nulls_daily.py
+[INFO] Preparados: 41 albaranes (UPSERT merge, sin pisar con NULLs, sin tocar FKs)
+[OK]  Lote 1 | 41/41
+[OK] UPSERT COMPLETADO (merge-duplicates, triggers intactos)
+
+==========================================================================================
+[2026-01-23T10:44:37.968149+01:00] RUN: C:\Users\idomi\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\Transforms\daily_export_albaran_linea_detalle_from_cabecera_xlsx_2026.py
+[INFO] Albaranes en cabecera: 41
+[INFO] Volcando DAILY anterior al GLOBAL: ALBARANES_LINEA_DAILY_DEL_DIA.xlsx (238 filas)
+[OK] GLOBAL actualizado: ALBARANES_LINEA_GLOBAL.xlsx | filas: 408 | hoja: ALBARAN_LINEA
+[INFO] (1/41) Descargando lineas de albaran_id=679756
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (2/41) Descargando lineas de albaran_id=679781
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (3/41) Descargando lineas de albaran_id=679786
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (4/41) Descargando lineas de albaran_id=679792
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (5/41) Descargando lineas de albaran_id=679796
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (6/41) Descargando lineas de albaran_id=679800
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (7/41) Descargando lineas de albaran_id=679804
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (8/41) Descargando lineas de albaran_id=679808
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (9/41) Descargando lineas de albaran_id=679809
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (10/41) Descargando lineas de albaran_id=679816
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (11/41) Descargando lineas de albaran_id=679822
+   [INFO] Nuevas: 3 | Repetidas: 0 | Total albaran: 3
+[INFO] (12/41) Descargando lineas de albaran_id=679826
+   [INFO] Nuevas: 16 | Repetidas: 0 | Total albaran: 16
+[INFO] (13/41) Descargando lineas de albaran_id=679830
+   [INFO] Nuevas: 8 | Repetidas: 0 | Total albaran: 8
+[INFO] (14/41) Descargando lineas de albaran_id=679834
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (15/41) Descargando lineas de albaran_id=679838
+   [INFO] Nuevas: 4 | Repetidas: 0 | Total albaran: 4
+[INFO] (16/41) Descargando lineas de albaran_id=679842
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (17/41) Descargando lineas de albaran_id=679846
+   [INFO] Nuevas: 8 | Repetidas: 0 | Total albaran: 8
+[INFO] (18/41) Descargando lineas de albaran_id=679855
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (19/41) Descargando lineas de albaran_id=679860
+   [INFO] Nuevas: 4 | Repetidas: 0 | Total albaran: 4
+[INFO] (20/41) Descargando lineas de albaran_id=679884
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (21/41) Descargando lineas de albaran_id=679888
+   [INFO] Nuevas: 7 | Repetidas: 0 | Total albaran: 7
+[INFO] (22/41) Descargando lineas de albaran_id=679892
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (23/41) Descargando lineas de albaran_id=679896
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (24/41) Descargando lineas de albaran_id=679898
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (25/41) Descargando lineas de albaran_id=679902
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (26/41) Descargando lineas de albaran_id=679920
+   [INFO] Nuevas: 4 | Repetidas: 0 | Total albaran: 4
+[INFO] (27/41) Descargando lineas de albaran_id=679924
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (28/41) Descargando lineas de albaran_id=679932
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (29/41) Descargando lineas de albaran_id=679937
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (30/41) Descargando lineas de albaran_id=679941
+   [INFO] Nuevas: 7 | Repetidas: 0 | Total albaran: 7
+[INFO] (31/41) Descargando lineas de albaran_id=679946
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (32/41) Descargando lineas de albaran_id=679948
+   [INFO] Nuevas: 8 | Repetidas: 0 | Total albaran: 8
+[INFO] (33/41) Descargando lineas de albaran_id=679950
+   [INFO] Nuevas: 10 | Repetidas: 0 | Total albaran: 10
+[INFO] (34/41) Descargando lineas de albaran_id=679955
+   [INFO] Nuevas: 16 | Repetidas: 0 | Total albaran: 16
+[INFO] (35/41) Descargando lineas de albaran_id=679959
+   [INFO] Nuevas: 8 | Repetidas: 0 | Total albaran: 8
+[INFO] (36/41) Descargando lineas de albaran_id=679963
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (37/41) Descargando lineas de albaran_id=679967
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[INFO] (38/41) Descargando lineas de albaran_id=679971
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (39/41) Descargando lineas de albaran_id=679975
+   [INFO] Nuevas: 2 | Repetidas: 0 | Total albaran: 2
+[INFO] (40/41) Descargando lineas de albaran_id=679979
+   [INFO] Nuevas: 3 | Repetidas: 0 | Total albaran: 3
+[INFO] (41/41) Descargando lineas de albaran_id=679983
+   [INFO] Nuevas: 1 | Repetidas: 0 | Total albaran: 1
+[OK] DAILY generado: ALBARANES_LINEA_DAILY_DEL_DIA.xlsx | filas: 146 | hoja: ALBARAN_LINEA
+[OK] GLOBAL actualizado: ALBARANES_LINEA_GLOBAL.xlsx | filas: 408 | hoja: ALBARAN_LINEA
+
+==========================================================================================
+[2026-01-23T10:44:45.776114+01:00] RUN: C:\Users\idomi\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 C:\Users\idomi\OneDrive\Documentos\EnteNova\ORBE\Streamlit_app\ENV\Transforms\load_albaran_linea_from_xlsx_v1_insert_only_skip_existing.py
+[INFO] Preparadas: 146 lineas con PK (sin tocar FKs)
+[INFO] Ya existen en BD: 146 lineas
+[INFO] Nuevas a insertar: 0
+[OK] Nada que insertar.

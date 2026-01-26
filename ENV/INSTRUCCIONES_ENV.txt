@@ -1,0 +1,30 @@
+ORBE ERP DESDE LA CARPETA ENV
+==============================
+
+Para enviar lo minimo: basta con la carpeta ENV y estos .bat internos.
+
+1) Preparar entorno (solo primera vez)
+--------------------------------------
+- Ejecuta setup_env.bat (doble clic dentro de ENV).
+- Si falta configuracion, solicita el archivo .env a IT.
+
+2) Arrancar
+-----------
+- run_all.bat: backend (8000) + frontend (8501) en paralelo.
+- run_backend.bat: solo backend.
+- run_streamlit.bat: solo frontend.
+
+3) Acceso
+---------
+- UI: http://localhost:8501
+- API docs: http://localhost:8000/docs
+- Si los puertos 8000/8501 estan ocupados, edita los .bat y cambia los puertos.
+
+4) Login por correo
+-------------------
+- Usa tu correo corporativo. El rol/permisos se gestionan en backend/Supabase.
+
+5) Seguridad
+------------
+- No incluyas credenciales reales en el ZIP. Las proporciona IT.
+- Claves sensibles nunca en el frontend ni en repos publicos.
