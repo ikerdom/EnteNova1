@@ -3,11 +3,7 @@
 # ======================================================
 
 import streamlit as st
-import subprocess
-import webbrowser
 import os
-import sys
-from dotenv import dotenv_values
 from datetime import date
 from dotenv import load_dotenv
 load_dotenv(override=True)
@@ -30,94 +26,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-
-def launch_dataquerybot():
-    ruta_bot = os.path.join(os.getcwd(), "dataquerybot")
-    fallback_env = dotenv_values(os.path.join(ruta_bot, ".env"))
-
-    # --------------------------------------------------------
-    # 🔥 ENTORNO LIMPIO (solo lo necesario)
-    # --------------------------------------------------------
-    env = os.environ.copy()  # heredamos PATH y resto de variables base
-
-    # --------------------------------------------------------
-    # 🔥 URL_SUPABASE (obligatoria)
-    # --------------------------------------------------------
-    # Preferimos la del .env interno del bot para no depender del host
-    supa_url = fallback_env.get("URL_SUPABASE") or os.getenv("URL_SUPABASE")
-    if not supa_url:
-        st.error("❌ Falta URL_SUPABASE en tu archivo .env (nivel ERP)")
-        return
-
-    env["URL_SUPABASE"] = supa_url.strip()
-
-    # --------------------------------------------------------
-    # 🔥 OPENAI_API_KEY (obligatoria)
-    # --------------------------------------------------------
-    # Preferimos la del .env interno del bot para no depender del host
-    openai_key = fallback_env.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
-    if not openai_key:
-        st.error("❌ Falta OPENAI_API_KEY en tu archivo .env (nivel ERP)")
-        return
-
-    env["OPENAI_API_KEY"] = openai_key.strip()
-
-    # --------------------------------------------------------
-    # 🧹 EXPULSAR POSIBLES CLAVES ANTIGUAS DEL SISTEMA
-    # --------------------------------------------------------
-    # Evita que DataQueryBot use una clave heredada del usuario
-    for bad in ["OPENAI_APIKEY", "OPENAI_KEY", "OPENAI", "API_KEY"]:
-        env.pop(bad, None)
-
-    # --------------------------------------------------------
-    # 🚀 Lanzar DataQueryBot (subproceso Streamlit)
-    # --------------------------------------------------------
-    cmd = [
-        sys.executable,
-        "-m",
-        "streamlit",
-        "run",
-        "app.py",
-        "--server.port",
-        "8600",
-        "--server.address",
-        "localhost",
-    ]
-    rol_usuario = (st.session_state.get("rol_usuario") or "").strip().lower()
-    if rol_usuario == "lector":
-        menu_principal = [
-            m
-            for m in menu_principal
-            if not (
-                "presupuesto" in m.lower()
-                or "pedido" in m.lower()
-                or "devoluci" in m.lower()
-            )
-        ]
-    proc = subprocess.Popen(
-        cmd,
-        cwd=ruta_bot,
-        env=env,     # ← ENTORNO CONTROLADO, SIN BASURA
-        shell=False  # heredamos PATH correcto sin depender del shell
-    )
-    st.toast(f"DataQueryBot lanzado (PID {proc.pid})", icon="✅")
-
-    # --------------------------------------------------------
-    # 🔗 Abrir navegador con identidad del usuario
-    # --------------------------------------------------------
-    user = st.session_state.get("user_email", "anon")
-    rol = st.session_state.get("rol_usuario", "N/A")
-    tipo = st.session_state.get("tipo_usuario", "N/A")
-
-    url = (
-        f"http://localhost:8600/"
-        f"?token=ENTENOVA2025"
-        f"&user={user}"
-        f"&rol={rol}"
-        f"&tipo={tipo}"
-    )
-
-    webbrowser.open_new_tab(url)
 
 # ======================================================
 # 🎨 TEMA CORPORATIVO ORBE
@@ -163,10 +71,6 @@ from modules.otros import render_otros
 
 # Campañas
 from modules.campania.campania_router import render_campania_router
-from modules.ai_querybot.ai_page import render_ai_page
-
-#ia
-from modules.ai_querybot.ai_page import render_ai_page
 
 # ======================================================
 # 🧩 CONTROL DE SESIÓN
@@ -220,7 +124,6 @@ if tipo_usuario == "trabajador":
         "💬 Historial / Comunicacion",
         "⚠️ Incidencias",
         "🧩 Otros",
-        "🤖 IA / Consultas inteligentes",
         "🚪 Cerrar sesion",
     ]
 
@@ -320,9 +223,6 @@ elif opcion == "⚠️ Incidencias":
 elif opcion == "🧩 Otros":
     st.sidebar.subheader("🧩 Otros")
     render_otros(supabase)
-
-elif "IA / Consultas" in opcion:
-    render_ai_page(launch_dataquerybot)
 
 elif opcion == "Nuevo lead":
     render_lead_form()
