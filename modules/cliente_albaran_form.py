@@ -45,6 +45,26 @@ def render_albaran_form(supabase, clienteid: int):
             label_visibility="collapsed",
         )
 
+    f1, f2, f3 = st.columns(3)
+    with f1:
+        filtro_estado = st.text_input(
+            "Estado",
+            placeholder="Ej: pendiente",
+            key=f"alb_estado_{clienteid}",
+        )
+    with f2:
+        filtro_tipo = st.text_input(
+            "Tipo doc",
+            placeholder="Ej: ALB",
+            key=f"alb_tipo_{clienteid}",
+        )
+    with f3:
+        ordenar_por = st.selectbox(
+            "Ordenar por",
+            ["fecha_albaran", "numero", "albaran_id"],
+            key=f"alb_sort_{clienteid}",
+        )
+
     if q != st.session_state[f"alb_last_q_{clienteid}"]:
         st.session_state[f"alb_limit_{clienteid}"] = st.session_state[f"alb_page_size_{clienteid}"]
         st.session_state[f"alb_last_q_{clienteid}"] = q
@@ -71,7 +91,7 @@ def render_albaran_form(supabase, clienteid: int):
                 "cuenta_cliente_proveedor"
             )
             .eq("clienteid", int(clienteid))
-            .order("fecha_albaran", desc=True)
+            .order(ordenar_por, desc=True)
         )
 
         if q:
@@ -94,6 +114,10 @@ def render_albaran_form(supabase, clienteid: int):
             query = query.gte("fecha_albaran", str(fecha_desde))
         if use_hasta:
             query = query.lte("fecha_albaran", str(fecha_hasta))
+        if filtro_estado:
+            query = query.ilike("estado", f"%{filtro_estado}%")
+        if filtro_tipo:
+            query = query.ilike("tipo_documento", f"%{filtro_tipo}%")
 
         res = query.range(0, limit - 1).execute()
         rows = res.data or []
@@ -104,6 +128,14 @@ def render_albaran_form(supabase, clienteid: int):
     if not rows:
         st.info("No hay albaranes para este cliente.")
         return
+
+    total_alb = len(rows)
+    total_imp = sum([r.get("total_general") or 0 for r in rows if isinstance(r.get("total_general"), (int, float))])
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Albaranes", total_alb)
+    m2.metric("Importe total (visible)", f"{total_imp:,.2f}")
+    if rows:
+        m3.metric("Ultima fecha", str(rows[0].get("fecha_albaran") or "-")[:10])
 
     col_options = [
         "albaran_id",

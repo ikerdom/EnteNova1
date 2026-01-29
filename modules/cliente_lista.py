@@ -19,6 +19,7 @@ import streamlit as st
 
 
 from modules.orbe_theme import apply_orbe_theme
+from modules.api_base import get_api_base
 
 
 from modules.cliente_form_api import render_cliente_form
@@ -124,18 +125,7 @@ def _normalize_id(v: Any):
 
 
 def _api_base() -> str:
-
-
-    try:
-
-
-        return st.secrets["ORBE_API_URL"]  # type: ignore[attr-defined]
-
-
-    except Exception:
-
-
-        return st.session_state.get("ORBE_API_URL") or "http://127.0.0.1:8000"
+    return get_api_base()
 
 
 
@@ -175,23 +165,10 @@ def _api_get(path: str, params: Optional[dict] = None) -> dict:
 
 
 def render_cliente_lista(API_URL: str):
-
-
     apply_orbe_theme()
-
-
-
-
 
     st.header("Gestion de clientes")
     st.caption("Consulta, filtra y accede a la ficha completa de tus clientes.")
-
-
-
-
-
-    # Lanzar formularios de alta
-
 
     ctop1, ctop2 = st.columns(2)
     with ctop1:
@@ -215,94 +192,64 @@ def render_cliente_lista(API_URL: str):
         "cli_view": "Tarjetas",
         "cli_result_count": 0,
         "cli_table_cols": ["clienteid", "razonsocial", "nombre", "cifdni"],
+        "cli_page_size": 30,
     }
-
     for k, v in defaults.items():
         st.session_state.setdefault(k, v)
 
     cli_catalogos = _api_get("/api/clientes/catalogos")
     grupos = {c["label"]: c["id"] for c in cli_catalogos.get("grupos", [])}
 
-
-    # Buscador
-
-
-
-
-
-    c1, c2 = st.columns([3, 1])
-
-
+    c1, c2, c3, c4, c5 = st.columns([3, 1.2, 1, 1, 1])
     with c1:
-
-
         q = st.text_input(
-
-
             "Buscar cliente",
-
-
             placeholder="Razon social o CIF/DNI",
-
-
             key="cli_q",
-
-
         )
-
-
         if st.session_state.get("last_q") != q:
-
-
             st.session_state["cli_page"] = 1
-
-
             st.session_state["last_q"] = q
-
-
     with c2:
-
-
+        st.session_state["cli_view"] = st.selectbox(
+            "Vista",
+            ["Tarjetas", "Tabla"],
+            index=["Tarjetas", "Tabla"].index(st.session_state.get("cli_view", "Tarjetas")),
+        )
+    with c3:
+        st.session_state["cli_page_size"] = st.selectbox(
+            "Por pagina",
+            options=[15, 30, 50, 100],
+            index=[15, 30, 50, 100].index(st.session_state.get("cli_page_size", 30)),
+        )
+    with c4:
         st.metric("Resultados", st.session_state["cli_result_count"])
-
-
-
-
+    with c5:
+        if st.button("Limpiar filtros"):
+            st.session_state["cli_q"] = ""
+            st.session_state["cli_tipo_filtro"] = "Todos"
+            st.session_state["cli_grupo_filtro"] = "Todos"
+            st.session_state["cli_page"] = 1
+            st.rerun()
 
     st.markdown("---")
 
-
-
-
-
-    # Ficha seleccionada arriba
-
-
     sel = st.session_state.get("cliente_detalle_id")
-
-
     if sel:
-
-
         _render_ficha_panel(sel)
-
-
         st.markdown("---")
 
-
-
-
-
-    # Opciones
-    with st.expander("Opciones", expanded=False):
-        o1, o2 = st.columns(2)
-        with o1:
-            st.session_state["cli_view"] = st.radio(
-                "Vista",
-                ["Tarjetas", "Tabla"],
-                horizontal=True,
+    with st.expander("Filtros avanzados", expanded=False):
+        f1, f2, f3 = st.columns(3)
+        with f1:
+            st.session_state["cli_tipo_filtro"] = st.selectbox(
+                "Tipo cliente/proveedor",
+                ["Todos", "CLIENTE", "PROVEEDOR", "AMBOS"],
             )
-        with o2:
+        with f2:
+            grupo_labels = ["Todos"] + list(grupos.keys())
+            st.session_state["cli_grupo_filtro"] = st.selectbox("Grupo", grupo_labels)
+        with f3:
             st.session_state["cli_sort_field"] = st.selectbox(
                 "Ordenar por",
                 ["razonsocial", "nombre", "cifdni", "codigocuenta", "codigoclienteoproveedor"],
@@ -312,16 +259,6 @@ def render_cliente_lista(API_URL: str):
                 ["ASC", "DESC"],
                 horizontal=True,
             )
-
-        f3, f4 = st.columns(2)
-        with f3:
-            st.session_state["cli_tipo_filtro"] = st.selectbox(
-                "Tipo cliente/proveedor",
-                ["Todos", "CLIENTE", "PROVEEDOR", "AMBOS"],
-            )
-        with f4:
-            grupo_labels = ["Todos"] + list(grupos.keys())
-            st.session_state["cli_grupo_filtro"] = st.selectbox("Grupo", grupo_labels)
 
         if st.session_state["cli_view"] == "Tabla":
             all_cols = [
@@ -351,35 +288,15 @@ def render_cliente_lista(API_URL: str):
                 key="cli_sort_dir_table",
             )
 
-
-    # Carga API
-
-
-
     page = st.session_state["cli_page"]
-
-
-    page_size = 30
-
+    page_size = st.session_state.get("cli_page_size", 30)
 
     params = {
-
-
         "q": q or None,
-
-
         "page": page,
-
-
         "page_size": page_size,
-
-
         "sort_field": st.session_state["cli_sort_field"],
-
-
         "sort_dir": st.session_state["cli_sort_dir"],
-
-
     }
 
     tipo_filtro = st.session_state.get("cli_tipo_filtro", "Todos")
@@ -389,138 +306,56 @@ def render_cliente_lista(API_URL: str):
     if grupo_filtro != "Todos":
         params["idgrupo"] = grupos.get(grupo_filtro)
 
-
-
     payload = _api_get("/api/clientes", params=params)
-
-
     clientes: List[Dict[str, Any]] = payload.get("data", [])
-
-
     total = payload.get("total", 0)
-
-
     total_pages = payload.get("total_pages", 1)
-
-
     st.session_state["cli_result_count"] = len(clientes)
 
-
-
-
-
     if not clientes:
-
-
         st.info("No se encontraron clientes.")
-
-
         return
 
-
-
-
-
-    # Tabla / Tarjetas
-
-
     if st.session_state["cli_view"] == "Tabla":
-
-
         cols_sel = st.session_state.get("cli_table_cols") or defaults["cli_table_cols"]
-
-
         rows = []
-
-
         for c in clientes:
-
-
-            row = {}
-
-
-            for col in cols_sel:
-
-
-                val = c.get(col)
-
-
-                row[col] = val
-
-
+            row = {col: c.get(col) for col in cols_sel}
             rows.append(row)
-
-
         df = pd.DataFrame(rows)
-
-
-        st.dataframe(df, use_container_width=True, hide_index=True)
-
-
+        st.dataframe(
+            df,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "clienteid": st.column_config.NumberColumn("ID", format="%d"),
+                "razonsocial": st.column_config.TextColumn("Razon social"),
+                "nombre": st.column_config.TextColumn("Nombre"),
+                "cifdni": st.column_config.TextColumn("CIF/DNI"),
+                "codigocuenta": st.column_config.TextColumn("Cuenta"),
+                "codigoclienteoproveedor": st.column_config.TextColumn("Codigo C/P"),
+                "clienteoproveedor": st.column_config.TextColumn("Tipo"),
+                "idgrupo": st.column_config.TextColumn("Grupo"),
+            },
+        )
     else:
-
-
         cols = st.columns(3)
-
-
         for i, c in enumerate(clientes):
-
-
             with cols[i % 3]:
-
-
                 _render_card(c)
 
-
-
-
-
-    # Paginacion
-
-
     st.markdown("---")
-
-
     p1, p2, p3 = st.columns(3)
-
-
     with p1:
-
-
         if st.button("Anterior", disabled=page <= 1):
-
-
             st.session_state["cli_page"] = page - 1
-
-
             st.rerun()
-
-
     with p2:
-
-
         st.write(f"Pagina {page} / {max(1, total_pages)} - Total: {total}")
-
-
     with p3:
-
-
         if st.button("Siguiente", disabled=page >= total_pages):
-
-
             st.session_state["cli_page"] = page + 1
-
-
             st.rerun()
-
-
-
-
-
-    # Detalle modal si seleccionado
-
-
-
 
 
 def _render_card(c: Dict[str, Any]):
@@ -532,12 +367,18 @@ def _render_card(c: Dict[str, Any]):
     codcp = _safe(c.get("codigoclienteoproveedor"))
 
     with st.container(border=True):
-        st.write(f"Cliente: {razon}")
-        st.caption(ident)
-        st.write(f"Tipo: {tipo}")
-        st.write(f"Grupo ID: {grupo}")
-        st.write(f"Codigo cuenta: {codcta}")
-        st.write(f"Codigo cliente/proveedor: {codcp}")
+        top_l, top_r = st.columns([3, 1])
+        with top_l:
+            st.markdown(f"**{razon}**")
+            st.caption(f"{ident} · Cuenta {codcta} · Codigo {codcp}")
+        with top_r:
+            st.markdown(
+                f\"\"\"<div style=\"text-align:right;\">
+<span style=\"display:inline-block;padding:2px 8px;border-radius:999px;background:#e2e8f0;color:#0f172a;font-size:0.82rem;font-weight:600;\">{tipo}</span><br>
+<span style=\"display:inline-block;margin-top:4px;padding:2px 8px;border-radius:999px;background:#ecfdf5;color:#166534;font-size:0.82rem;font-weight:600;\">Grupo {grupo}</span>
+</div>\"\"\",
+                unsafe_allow_html=True,
+            )
 
     cid = c.get("clienteid")
     b1, b2 = st.columns(2)

@@ -4,17 +4,11 @@ from typing import Any, Dict, List, Optional
 
 import requests
 import streamlit as st
+from modules.api_base import get_api_base
 
 
 def api_base() -> str:
-    try:
-        return st.secrets["ORBE_API_URL"]  # type: ignore[attr-defined]
-    except Exception:
-        return (
-            os.getenv("ORBE_API_URL")
-            or st.session_state.get("ORBE_API_URL")
-            or "http://127.0.0.1:8000"
-        )
+    return get_api_base()
 
 
 def api_get(path: str, params: Optional[dict] = None):
@@ -217,6 +211,12 @@ def _direccion_editor(
             st.session_state[f"{prefix}_idprovincia"] = row.get("provincia_nombre_raw") or ""
             if not st.session_state.get(f"{prefix}_idpais"):
                 st.session_state[f"{prefix}_idpais"] = "ES"
+
+    st.markdown("---")
+    with st.container(border=True):
+        st.caption("Vista previa")
+        st.write(f\"{direccion or direccionfiscal or '-'}\") 
+        st.write(f\"{municipio or '-'} · {idprovincia or '-'} · {codigopostal or '-'}\")
 
     payload = {
         "razonsocial": razonsocial.strip() or None,

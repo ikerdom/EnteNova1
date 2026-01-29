@@ -1,19 +1,14 @@
 import os
+import re
 from typing import Any, Dict, List, Optional
 
 import requests
 import streamlit as st
+from modules.api_base import get_api_base
 
 
 def api_base() -> str:
-    try:
-        return st.secrets["ORBE_API_URL"]  # type: ignore[attr-defined]
-    except Exception:
-        return (
-            os.getenv("ORBE_API_URL")
-            or st.session_state.get("ORBE_API_URL")
-            or "http://127.0.0.1:8000"
-        )
+    return get_api_base()
 
 
 def api_get(path: str, params: Optional[dict] = None):
@@ -93,7 +88,11 @@ def render_contacto_form(clienteid: int, key_prefix: str = ""):
                 st.write(f"Tipo: {tipo}")
                 st.write(f"Valor: {valor}")
             with cols[1]:
-                st.write("Principal" if es_principal else "")
+                if es_principal:
+                    st.markdown(
+                        \"\"\"<div style=\"padding:4px 8px;border-radius:999px;background:#dcfce7;color:#166534;font-weight:700;text-align:center;\">Principal</div>\"\"\",
+                        unsafe_allow_html=True,
+                    )
 
         col1, col2, col3 = st.columns(3)
 
@@ -131,11 +130,18 @@ def _contacto_editor(clienteid: int, c: Optional[Dict[str, Any]] = None, key_pre
         st.session_state.setdefault(k, (c or {}).get(key, default))
         return st.text_input(label, key=k)
 
-    tipos = ["TELEFONO", "EMAIL", "FAX"]
+    tipos = ["TELEFONO", "EMAIL", "FAX", "WHATSAPP"]
     tipo_default = (c or {}).get("tipo") or "TELEFONO"
     tipo = st.selectbox("Tipo", tipos, index=tipos.index(tipo_default), key=f"{prefix}_tipo")
     valor = field("valor", "Valor *")
     principal = st.checkbox("Principal", value=bool((c or {}).get("principal")), key=f"{prefix}_principal")
+
+    if tipo == "EMAIL":
+        if valor and not re.match(r"^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", valor.strip()):
+            st.warning("Email no valido.")
+    if tipo in ("TELEFONO", "WHATSAPP"):
+        if valor and len(re.sub(r\"\\D+\", \"\", valor)) < 7:
+            st.warning("Telefono parece corto.")
 
     col1, col2 = st.columns(2)
 

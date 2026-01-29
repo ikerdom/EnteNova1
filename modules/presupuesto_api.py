@@ -6,14 +6,11 @@ from datetime import date
 from typing import Any, Dict, Optional
 
 import requests
-import streamlit as st
+from modules.api_base import get_api_base
 
 
 def _base_url() -> str:
-    try:
-        return st.secrets["ORBE_API_URL"]  # type: ignore[attr-defined]
-    except Exception:
-        return st.session_state.get("ORBE_API_URL") or "http://127.0.0.1:8000"
+    return get_api_base()
 
 
 def _handle_response(resp: requests.Response) -> Any:
@@ -27,17 +24,17 @@ def _handle_response(resp: requests.Response) -> Any:
 
 
 def list_presupuestos(params: Optional[dict] = None) -> dict:
-    r = requests.get(f"{_base_url()}/api/presupuestos", params=params, timeout=20)
+    r = requests.get(f"{get_api_base()}/api/presupuestos", params=params, timeout=20)
     return _handle_response(r)
 
 
 def get_catalogos() -> dict:
-    r = requests.get(f"{_base_url()}/api/presupuestos/catalogos", timeout=20)
+    r = requests.get(f"{get_api_base()}/api/presupuestos/catalogos", timeout=20)
     return _handle_response(r)
 
 
 def get_presupuesto(presupuestoid: int) -> dict:
-    r = requests.get(f"{_base_url()}/api/presupuestos/{presupuestoid}", timeout=20)
+    r = requests.get(f"{get_api_base()}/api/presupuestos/{presupuestoid}", timeout=20)
     return _handle_response(r)
 
 

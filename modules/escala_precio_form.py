@@ -1,29 +1,13 @@
 # ======================================================
 # 💰 ESCALAS DE PRECIO — Gestión de descuentos y precios especiales
 # ======================================================
-import os
 from datetime import date
-from pathlib import Path
 
 import pandas as pd
 import streamlit as st
-from dotenv import load_dotenv
-from supabase import create_client
+from modules.supa_client import get_supabase_client
 
-# ======================================================
-# 🔌 CONFIGURACIÓN SUPABASE
-# ======================================================
-ENV_PATH = Path(__file__).resolve().parents[1] / ".env"
-load_dotenv(dotenv_path=ENV_PATH, override=True)
-
-URL_SUPABASE = (os.getenv("URL_SUPABASE") or "").strip()
-SUPABASE_KEY = (os.getenv("SUPABASE_KEY") or "").strip()
-if not URL_SUPABASE or not SUPABASE_KEY:
-    raise RuntimeError("Faltan URL_SUPABASE/SUPABASE_KEY en ENV/.env")
-if URL_SUPABASE.startswith("postgresql://") or not URL_SUPABASE.startswith("http"):
-    raise RuntimeError("URL_SUPABASE invalida. Debe ser https://xxxx.supabase.co")
-
-supabase = create_client(URL_SUPABASE, SUPABASE_KEY)
+supabase = get_supabase_client()
 
 
 def render_escala_precio():

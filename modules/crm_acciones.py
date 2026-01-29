@@ -195,10 +195,22 @@ def render_crm_acciones(_supabase_unused=None, clienteid: Optional[int] = None):
         col1.button("Anterior", on_click=_mover, args=(-1,), key="btn_prev")
         col2.button("Siguiente", on_click=_mover, args=(1,), key="btn_next")
 
-    f1, f2, f3 = st.columns(3)
+    f1, f2, f3, f4, f5 = st.columns(5)
     filtro_estado = f1.selectbox("Estado", ["Todos"] + list(estados_map.keys()), index=0)
     filtro_tipo = f2.selectbox("Tipo", ["Todos"] + list(tipos_map.keys()), index=0)
     buscar = f3.text_input("Buscar titulo...", placeholder="Ej: llamada, presupuesto, reunion")
+    modo_vista = f4.selectbox(
+        "Modo",
+        ["Calendario", "Lista"],
+        index=["Calendario", "Lista"].index(st.session_state.get("crm_modo", "Calendario")),
+    )
+    rango = f5.selectbox(
+        "Rango",
+        ["Todo", "Hoy", "7 dias", "30 dias"],
+        index=["Todo", "Hoy", "7 dias", "30 dias"].index(st.session_state.get("crm_rango", "Todo")),
+    )
+    st.session_state["crm_rango"] = rango
+    st.session_state["crm_modo"] = modo_vista
 
     with st.expander("Nueva accion", expanded=False):
         with st.form("form_accion"):
@@ -257,6 +269,21 @@ def render_crm_acciones(_supabase_unused=None, clienteid: Optional[int] = None):
                     if cliente_manual > 0:
                         cliente_sel_id = int(cliente_manual)
 
+            st.markdown("---")
+            colp1, colp2, colp3 = st.columns(3)
+            with colp1:
+                st.caption("Resumen")
+                st.write(titulo or "-")
+                st.write(f"Tipo: {tipo}")
+            with colp2:
+                st.caption("Fechas")
+                st.write(f"Vence: {fecha_venc.isoformat()}")
+                st.write(f"Hora: {hora}")
+            with colp3:
+                st.caption("Asignacion")
+                st.write(trab_sel or "-")
+                st.write(f"Cliente: {cliente_sel_id or '-'}")
+
             enviado = st.form_submit_button("Guardar", use_container_width=True)
 
         if enviado and titulo.strip():
@@ -304,6 +331,67 @@ def render_crm_acciones(_supabase_unused=None, clienteid: Optional[int] = None):
     except Exception as e:
         st.error(f"Error al cargar acciones: {e}")
         rows = []
+
+    if rango != "Todo":
+        today = date.today()
+        if rango == "Hoy":
+            start = today
+        elif rango == "7 dias":
+            start = today - timedelta(days=7)
+        else:
+            start = today - timedelta(days=30)
+
+        def _in_range(r):
+            raw = r.get("fecha_accion") or r.get("fecha_vencimiento")
+            if not raw:
+                return False
+            try:
+                d = parse_date(str(raw)).date()
+            except Exception:
+                return False
+            return d >= start
+
+        rows = [r for r in rows if _in_range(r)]
+
+    # Resumen rápido
+    counts = {}
+    for r in rows:
+        key = (r.get("estado") or "Sin estado").lower()
+        counts[key] = counts.get(key, 0) + 1
+    if rows:
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Total", len(rows))
+        m2.metric("Pendientes", counts.get("pendiente", 0))
+        m3.metric("En curso", counts.get("en curso", 0))
+        m4.metric("Completadas", counts.get("completada", 0))
+
+    if st.session_state.get("crm_modo") == "Lista":
+        for r in rows:
+            titulo = r.get("titulo") or "(Sin titulo)"
+            tipo = r.get("tipo") or "-"
+            estado = r.get("estado") or "-"
+            vence = str(r.get("fecha_vencimiento") or "")[:16].replace("T", " ")
+            accion = str(r.get("fecha_accion") or "")[:16].replace("T", " ")
+            cliente = r.get("clienteid") or "-"
+            color = _color_for(estado)
+
+            with st.container(border=True):
+                c1, c2, c3, c4 = st.columns([3, 1.4, 1.2, 1.2])
+                with c1:
+                    st.markdown(f"**{titulo}**")
+                    st.caption(f"Tipo: {tipo} · Cliente: {cliente}")
+                with c2:
+                    st.markdown(
+                        f\"\"\"<div style=\"padding:4px 10px;border-radius:999px;background:{color};color:#fff;font-weight:700;text-align:center;\">{estado}</div>\"\"\",
+                        unsafe_allow_html=True,
+                    )
+                with c3:
+                    st.caption("Vence")
+                    st.write(vence or "-")
+                with c4:
+                    st.caption("Accion")
+                    st.write(accion or "-")
+        return
 
     events = [_to_event(r) for r in rows]
 

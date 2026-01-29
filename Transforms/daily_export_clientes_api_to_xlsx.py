@@ -5,12 +5,14 @@ from pathlib import Path
 
 import pandas as pd
 import requests
+from api_env import get_cloudia_base_url
 
 # =========================
 # CONFIG
 # =========================
 EMPRESA_ID = 4
-BASE_URL = f"http://app.cloud-ia.es:8080/ords/cloudia_integracion_ia/clientes/{EMPRESA_ID}"
+CLOUDIA_BASE = get_cloudia_base_url()
+BASE_URL = f"{CLOUDIA_BASE}/ords/cloudia_integracion_ia/clientes/{EMPRESA_ID}"
 
 PAGE_SIZE = 25  # <-- tu offset va de 25 en 25
 REQUEST_TIMEOUT = 180

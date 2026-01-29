@@ -1,11 +1,6 @@
 import os
-import sys
-import subprocess
 from pathlib import Path
-from datetime import datetime
-from zoneinfo import ZoneInfo
-
-TZ = ZoneInfo("Europe/Madrid")
+from pipeline_runner import run_pipeline
 
 # Fuerza UTF-8 en Windows
 os.environ["PYTHONUTF8"] = "1"
@@ -19,68 +14,56 @@ SCRIPTS = [
 
 LOG_FILE_NAME = "pipeline_daily.log"
 LAST_RUN_FILE = "pipeline_last_run.txt"
+LOCK_FILE_NAME = "pipeline_daily.lock"
+MAX_LOG_BYTES = 10 * 1024 * 1024
+KEEP_LOG_FILES = 5
 
+TIMEOUTS = {
+    "daily_export_albaran_cabecera_api_to_xlsx.py": 12 * 60,
+    "load_albaran_from_api_xlsx_v5_upsert_merge_skip_nulls_daily.py": 12 * 60,
+    "daily_export_albaran_linea_detalle_from_cabecera_xlsx_2026.py": 20 * 60,
+    "load_albaran_linea_from_xlsx_v1_insert_only_skip_existing.py": 15 * 60,
+}
+DEFAULT_TIMEOUT = 15 * 60
 
-def tail_file(path: Path, n_lines: int = 200) -> str:
-    try:
-        lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
-        return "\n".join(lines[-n_lines:])
-    except Exception:
-        return ""
+RETRYABLE_PREFIXES = ("daily_export_", "load_", "sync_")
+MAX_ATTEMPTS_RETRYABLE = 3
+SLEEP_BETWEEN_RETRIES_S = 60
+BACKOFF_MAX_S = 300
 
-
-def run_step(py: Path, log_path: Path) -> None:
-    cmd = [sys.executable, "-X", "utf8", str(py)]
-    ts = datetime.now(TZ).isoformat()
-
-    with log_path.open("a", encoding="utf-8") as f:
-        f.write("\n" + "=" * 90 + "\n")
-        f.write(f"[{ts}] RUN: {' '.join(cmd)}\n")
-        f.flush()
-
-        p = subprocess.Popen(
-            cmd,
-            cwd=str(py.parent),
-            stdout=f,
-            stderr=f,
-            text=True,
-            env=os.environ.copy(),
-        )
-        code = p.wait()
-
-    if code != 0:
-        print("\n" + "!" * 90)
-        print(f"[ERROR] Fallo: {py.name} (exit={code})")
-        print("[INFO] Ultimas lineas del log:\n")
-        print(tail_file(log_path, n_lines=260))
-        print("!" * 90 + "\n")
-        raise RuntimeError(f"Fallo {py.name} (exit={code}). Mira el log: {log_path}")
+AUTO_COMMIT_FILES = [
+    "ALBARANES_CABECERA_DAILY_DEL_DIA.xlsx",
+    "ALBARANES_CABECERA_GLOBAL.xlsx",
+    "ALBARANES_LINEA_DAILY_DEL_DIA.xlsx",
+    "ALBARANES_LINEA_GLOBAL.xlsx",
+]
+AUTO_COMMIT_MESSAGE = "chore: update albaranes excels"
 
 
 def main():
     base_dir = Path(__file__).resolve().parent
-    log_path = base_dir / LOG_FILE_NAME
-    last_run_path = base_dir / LAST_RUN_FILE
+    repo_root = base_dir.parents[1]
+    auto_commit_paths = [base_dir / f for f in AUTO_COMMIT_FILES]
 
-    with log_path.open("a", encoding="utf-8") as f:
-        f.write("\n" + "#" * 90 + "\n")
-        f.write(f"PIPELINE START {datetime.now(TZ).isoformat()}\n")
-
-    for name in SCRIPTS:
-        py = base_dir / name
-        if not py.exists():
-            raise FileNotFoundError(f"No existe el script: {py}")
-
-        print(f"[RUN] {name}")
-        run_step(py, log_path)
-        print(f"[OK]  {name}")
-
-    try:
-        last_run_path.write_text(datetime.now(TZ).date().isoformat(), encoding="utf-8")
-    except Exception:
-        pass
-
-    print(f"[OK] PIPELINE COMPLETADO. Log: {log_path}")
+    run_pipeline(
+        scripts=SCRIPTS,
+        log_file_name=LOG_FILE_NAME,
+        timeouts=TIMEOUTS,
+        default_timeout=DEFAULT_TIMEOUT,
+        retryable_prefixes=RETRYABLE_PREFIXES,
+        max_attempts_retryable=MAX_ATTEMPTS_RETRYABLE,
+        sleep_between_retries_s=SLEEP_BETWEEN_RETRIES_S,
+        backoff_max_s=BACKOFF_MAX_S,
+        lock_file_name=LOCK_FILE_NAME,
+        last_run_file_name=LAST_RUN_FILE,
+        skip_if_ran_today=True,
+        max_log_bytes=MAX_LOG_BYTES,
+        keep_log_files=KEEP_LOG_FILES,
+        auto_commit_paths=auto_commit_paths,
+        auto_commit_message=AUTO_COMMIT_MESSAGE,
+        auto_commit_repo_root=repo_root,
+        base_dir=base_dir,
+    )
 
 
 if __name__ == "__main__":

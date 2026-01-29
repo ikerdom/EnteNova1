@@ -816,3 +816,37 @@ PIPELINE START 2026-01-23T10:44:28.107087+01:00
 [INFO] Ya existen en BD: 146 lineas
 [INFO] Nuevas a insertar: 0
 [OK] Nada que insertar.
+
+##########################################################################################
+PIPELINE START 2026-01-29T14:10:27.201106+01:00
+
+==========================================================================================
+[2026-01-29T14:10:27.201106+01:00] RUN: C:\Users\idomi\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 C:\Users\idomi\OneDrive\Documentos\GitHub\EnteNova1\Transforms\daily_export_albaran_cabecera_api_to_xlsx.py
+[INFO] Volcando DAILY anterior al GLOBAL: ALBARANES_CABECERA_DAILY_DEL_DIA.xlsx (41 filas)
+[OK] GLOBAL actualizado: ALBARANES_CABECERA_GLOBAL.xlsx | filas: 13050 | hoja: ALBARAN_CABECERA
+[INFO] FECHA_DESDE usada: 22-01-2026
+[INFO] ENDPOINT: http://app.cloud-ia.es:8080/ords/cloudia_integracion_ia/albaranes/empresa/4/fecha/22-01-2026
+[INFO] Descargando offset=0 ...
+[INFO] Nuevos en esta pagina: 25 | Repetidos: 0 | Total nuevos: 25
+[INFO] Descargando offset=25 ...
+[INFO] Nuevos en esta pagina: 25 | Repetidos: 0 | Total nuevos: 50
+[INFO] Descargando offset=50 ...
+[INFO] Nuevos en esta pagina: 25 | Repetidos: 0 | Total nuevos: 75
+[INFO] Descargando offset=75 ...
+[INFO] Nuevos en esta pagina: 25 | Repetidos: 0 | Total nuevos: 100
+[INFO] Descargando offset=100 ...
+[INFO] Nuevos en esta pagina: 25 | Repetidos: 0 | Total nuevos: 125
+[INFO] Descargando offset=125 ...
+[INFO] Nuevos en esta pagina: 25 | Repetidos: 0 | Total nuevos: 150
+[INFO] Descargando offset=150 ...
+[INFO] Nuevos en esta pagina: 20 | Repetidos: 0 | Total nuevos: 170
+[INFO] Ultima pagina.
+[OK] DAILY generado: ALBARANES_CABECERA_DAILY_DEL_DIA.xlsx | filas: 170 | hoja: ALBARAN_CABECERA
+[OK] GLOBAL actualizado: ALBARANES_CABECERA_GLOBAL.xlsx | filas: 13151 | hoja: ALBARAN_CABECERA
+
+==========================================================================================
+[2026-01-29T14:12:10.054922+01:00] RUN: C:\Users\idomi\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe -X utf8 C:\Users\idomi\OneDrive\Documentos\GitHub\EnteNova1\Transforms\load_albaran_from_api_xlsx_v5_upsert_merge_skip_nulls_daily.py
+Traceback (most recent call last):
+  File "C:\Users\idomi\OneDrive\Documentos\GitHub\EnteNova1\Transforms\load_albaran_from_api_xlsx_v5_upsert_merge_skip_nulls_daily.py", line 21, in <module>
+    raise RuntimeError("Faltan URL_SUPABASE/SUPABASE_KEY en ENV/.env")
+RuntimeError: Faltan URL_SUPABASE/SUPABASE_KEY en ENV/.env

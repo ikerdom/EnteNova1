@@ -37,8 +37,8 @@ def apply_orbe_theme():
 
     html, body, [data-testid="stAppViewContainer"], .stApp {
         font-family: "Space Grotesk", "Segoe UI", Tahoma, sans-serif !important;
-        font-size: 1.16rem !important;
-        line-height: 1.55 !important;
+        font-size: 1.02rem !important;
+        line-height: 1.5 !important;
         color: var(--ink-1) !important;
         background: radial-gradient(1100px 600px at 15% -10%, #ffffff 0%, var(--bg-1) 48%, var(--bg-2) 100%) !important;
     }
@@ -60,10 +60,10 @@ def apply_orbe_theme():
         z-index: 1;
     }
 
-    h1 { font-size: 2.3rem !important; }
-    h2 { font-size: 1.86rem !important; }
-    h3 { font-size: 1.5rem !important; }
-    h4 { font-size: 1.28rem !important; }
+    h1 { font-size: 2.15rem !important; }
+    h2 { font-size: 1.75rem !important; }
+    h3 { font-size: 1.42rem !important; }
+    h4 { font-size: 1.22rem !important; }
 
     h1,h2,h3,h4 {
         font-family: "Fraunces", "Space Grotesk", serif !important;
@@ -77,7 +77,7 @@ def apply_orbe_theme():
         border: 1px solid var(--border) !important;
         border-radius: 12px !important;
         padding: 0.6rem 0.78rem !important;
-        font-size: 1.08rem !important;
+        font-size: 1.0rem !important;
         background: #ffffff !important;
         box-shadow: inset 0 1px 0 rgba(255,255,255,0.6) !important;
     }
@@ -89,7 +89,7 @@ def apply_orbe_theme():
     }
 
     label, .stTextInput label, .stSelectbox label {
-        font-size: 1.02rem !important;
+        font-size: 0.98rem !important;
         font-weight: 600 !important;
         color: var(--ink-2) !important;
         margin-bottom: 0.18rem !important;
@@ -117,11 +117,11 @@ def apply_orbe_theme():
         border: none !important;
         border-radius: 14px !important;
 
-        font-size: 1.12rem !important;
+        font-size: 1.03rem !important;
         font-weight: 700 !important;
 
         padding: 0.7rem 1.1rem !important;
-        min-height: 3.0rem !important;
+        min-height: 2.7rem !important;
         min-width: 0 !important;
         width: auto !important;
 
@@ -144,9 +144,9 @@ def apply_orbe_theme():
         align-items: center !important;
         justify-content: center !important;
 
-        min-width: 3.0rem !important;
-        max-width: 3.0rem !important;
-        min-height: 2.9rem !important;
+        min-width: 2.7rem !important;
+        max-width: 2.7rem !important;
+        min-height: 2.5rem !important;
         padding: 0.38rem !important;
         font-size: 1.08rem !important;
         border-radius: 12px !important;
@@ -174,14 +174,14 @@ def apply_orbe_theme():
         border: none !important;
         border-radius: 12px !important;
 
-        font-size: 1.16rem !important;
+        font-size: 1.05rem !important;
         font-weight: 700 !important;
 
         padding: 0.84rem 1.05rem !important;
         margin-top: 0.50rem !important;
 
         width: 100% !important;
-        min-height: 3.3rem !important;
+        min-height: 2.9rem !important;
         box-shadow: 0 8px 16px rgba(232, 93, 63, 0.20) !important;
     }
 
@@ -206,7 +206,7 @@ def apply_orbe_theme():
     }
 
     [data-testid="stSidebar"] {
-        font-size: 1.04rem !important;
+        font-size: 1.0rem !important;
     }
 
     footer { visibility: hidden !important; }

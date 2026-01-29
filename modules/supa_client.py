@@ -30,7 +30,7 @@ def _get_creds():
 
     # Try Streamlit secrets first (if available)
     try:
-        url = st.secrets.get("URL_SUPABASE")  # type: ignore[attr-defined]
+        url = st.secrets.get("URL_SUPABASE") or st.secrets.get("SUPABASE_URL")  # type: ignore[attr-defined]
         key = st.secrets.get("SUPABASE_KEY")  # type: ignore[attr-defined]
         if url and key:
             return url, key
@@ -38,13 +38,13 @@ def _get_creds():
         pass
 
     # Fallback to environment variables
-    url = os.getenv("URL_SUPABASE")
+    url = os.getenv("URL_SUPABASE") or os.getenv("SUPABASE_URL")
     key = os.getenv("SUPABASE_KEY")
 
     # Fallback to .env values if still missing
     if not url or not key:
         file_vals = dotenv_values(env_path) if os.path.isfile(env_path) else {}
-        url = url or file_vals.get("URL_SUPABASE")
+        url = url or file_vals.get("URL_SUPABASE") or file_vals.get("SUPABASE_URL")
         key = key or file_vals.get("SUPABASE_KEY")
 
     if not url or not key:

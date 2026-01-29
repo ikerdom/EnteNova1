@@ -7,6 +7,7 @@ import argparse
 
 import pandas as pd
 import requests
+from api_env import get_cloudia_base_url
 
 
 # =========================
@@ -193,9 +194,8 @@ def export_to_xlsx(from_date_str: str) -> str:
 
     # 1) Construir URL con FECHA_DESDE fija
     fecha_desde = from_date_str
-    base_url = (
-        f"http://app.cloud-ia.es:8080/ords/cloudia_integracion_ia/albaranes/empresa/{EMPRESA_ID}/fecha/{fecha_desde}"
-    )
+    cloudia_base = get_cloudia_base_url()
+    base_url = f"{cloudia_base}/ords/cloudia_integracion_ia/albaranes/empresa/{EMPRESA_ID}/fecha/{fecha_desde}"
 
     print(f"[INFO] FECHA_DESDE usada: {fecha_desde}")
     print(f"[INFO] ENDPOINT: {base_url}")

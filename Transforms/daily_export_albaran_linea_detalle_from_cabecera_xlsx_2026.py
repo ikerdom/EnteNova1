@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 import requests
+from api_env import get_cloudia_base_url
 
 
 # =========================
@@ -14,7 +15,8 @@ CABECERA_XLSX = "ALBARANES_CABECERA_DAILY_DEL_DIA.xlsx"
 CABECERA_SHEET = "ALBARAN_CABECERA"
 CABECERA_COL_ID = "ALBARAN_ID"
 
-LINEA_URL_TMPL = "http://app.cloud-ia.es:8080/ords/cloudia_integracion_ia/albaranes/{albaran_id}/linea_detalle"
+CLOUDIA_BASE = get_cloudia_base_url()
+LINEA_URL_TMPL = f"{CLOUDIA_BASE}/ords/cloudia_integracion_ia/albaranes/{{albaran_id}}/linea_detalle"
 
 SHEET_NAME = "ALBARAN_LINEA"
 

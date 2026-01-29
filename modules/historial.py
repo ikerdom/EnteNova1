@@ -59,7 +59,7 @@ def render_historial(supabase):
     clientes_map = {(c.get("razonsocial") or c.get("nombre") or "-"): c.get("clienteid") for c in clientes}
 
     st.markdown("### Filtros")
-    colf1, colf2, colf3, colf4 = st.columns([2, 2, 2, 2])
+    colf1, colf2, colf3, colf4, colf5 = st.columns([2, 2, 2, 2, 2])
     with colf1:
         trab_sel = st.selectbox("Trabajador", ["Yo mismo"] + list(trabajadores_map.keys()))
     with colf2:
@@ -69,6 +69,8 @@ def render_historial(supabase):
     with colf4:
         fecha_desde = st.date_input("Desde", value=date.today() - timedelta(days=60))
         fecha_hasta = st.date_input("Hasta", value=date.today())
+    with colf5:
+        buscar_txt = st.text_input("Buscar texto", placeholder="Resumen, mensaje, descripcion...")
 
     trabajador_filtro = trabajadorid if trab_sel == "Yo mismo" else trabajadores_map.get(trab_sel)
     if clienteid:
@@ -101,6 +103,17 @@ def render_historial(supabase):
 
         resumen = st.text_input("Resumen breve", placeholder="Ej: llamada con cliente sobre presupuesto")
         detalle = st.text_area("Detalles", placeholder="Describe lo tratado...", height=90)
+
+        st.markdown("---")
+        prev1, prev2 = st.columns([2, 1])
+        with prev1:
+            st.caption("Vista previa")
+            st.write(resumen or "-")
+            st.write(detalle[:140] + ("..." if len(detalle) > 140 else ""))
+        with prev2:
+            st.caption("Datos")
+            st.write(f"Tipo: {tipo}")
+            st.write(f"{fecha} {hora.strftime('%H:%M')}")
 
         enviado = st.form_submit_button("Registrar")
 
@@ -141,6 +154,7 @@ def render_historial(supabase):
 
     st.markdown("---")
     st.subheader("Historial de comunicaciones recientes")
+    topn = st.selectbox("Mostrar", [50, 100, 200, 500], index=2)
 
     mensajes: List[Dict[str, Any]] = []
     if has_mensajes:
@@ -150,7 +164,7 @@ def render_historial(supabase):
                 .select("*")
                 .eq("trabajadorid", trabajador_filtro)
                 .order("fecha_envio", desc=True)
-                .limit(200)
+                .limit(topn)
             )
 
             if cli_sel != "Todos":
@@ -192,13 +206,23 @@ def render_historial(supabase):
                 query = query.eq("clienteid", clienteid)
             if trabajador_filtro:
                 query = query.eq("trabajador_creadorid", trabajador_filtro)
-            mensajes = query.order("fecha_accion", desc=True).limit(200).execute().data or []
+            mensajes = query.order("fecha_accion", desc=True).limit(topn).execute().data or []
         except Exception:
             mensajes = []
+
+    if buscar_txt:
+        q = buscar_txt.lower()
+        def _match(m):
+            for k in ["titulo", "contenido", "descripcion", "remitente"]:
+                if q in str(m.get(k, "")).lower():
+                    return True
+            return False
+        mensajes = [m for m in mensajes if _match(m)]
 
     if not mensajes:
         st.info("No hay comunicaciones registradas todavia.")
     else:
+        st.caption(f"Registros: {len(mensajes)}")
         contacto_ids = [m.get("cliente_contactoid") or m.get("contacto_id") for m in mensajes]
         contacto_map = {}
         if contacto_ids:

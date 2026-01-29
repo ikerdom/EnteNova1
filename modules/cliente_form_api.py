@@ -1,17 +1,12 @@
 import os
+import re
 import requests
 import streamlit as st
+from modules.api_base import get_api_base
 
 
 def _api_base() -> str:
-    try:
-        return st.secrets["ORBE_API_URL"]  # type: ignore[attr-defined]
-    except Exception:
-        return (
-            os.getenv("ORBE_API_URL")
-            or st.session_state.get("ORBE_API_URL")
-            or "http://127.0.0.1:8000"
-        )
+    return get_api_base()
 
 
 def _api_get(path: str, params=None):
@@ -35,6 +30,25 @@ def _api_put(path: str, json=None):
 def _init_value(key: str, value):
     if key not in st.session_state:
         st.session_state[key] = value if value is not None else ""
+
+
+def _buscar_postal(cp: str) -> list[dict]:
+    try:
+        r = requests.get(f"{_api_base()}/api/postal/buscar", params={"cp": cp}, timeout=15)
+        r.raise_for_status()
+        return r.json() or []
+    except Exception:
+        return []
+
+
+def _digits_only(value: str) -> str:
+    return re.sub(r"\D+", "", value or "")
+
+
+def _email_ok(value: str) -> bool:
+    if not value:
+        return True
+    return bool(re.match(r"^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", value.strip()))
 
 
 def render_cliente_form(modo: str = "cliente"):
@@ -67,6 +81,16 @@ def render_cliente_form(modo: str = "cliente"):
         except Exception as e:
             st.error(f"No se pudieron cargar los datos del cliente: {e}")
             cliente_base = {}
+
+    st.markdown("#### Estado del formulario")
+    prog_items = []
+    prog_items.append(bool(st.session_state.get(f"{key_prefix}_razon") or st.session_state.get(f"{key_prefix}_nombre")))
+    prog_items.append(bool(st.session_state.get(f"{key_prefix}_cif")))
+    prog_items.append(bool(st.session_state.get(f"{key_prefix}_tel") or st.session_state.get(f"{key_prefix}_c_mail")))
+    prog_items.append(bool(st.session_state.get(f"{key_prefix}_dom")))
+    progress = sum(1 for p in prog_items if p) / len(prog_items)
+    st.progress(progress)
+    st.caption("Completa los campos clave para avanzar más rápido en el alta.")
 
     with st.expander("Informacion general", expanded=True):
         c1, c2 = st.columns(2)
@@ -128,6 +152,27 @@ def render_cliente_form(modo: str = "cliente"):
             provincia = st.text_input("Provincia", key=f"{key_prefix}_prov")
             idpais = st.text_input("Pais (ID)", key=f"{key_prefix}_pais")
 
+        st.session_state.setdefault(f"{key_prefix}_cp_auto", True)
+        auto_cp = st.checkbox("Autocompletar CP", key=f"{key_prefix}_cp_auto")
+        cp_digits = _digits_only(codigopostal)
+        if auto_cp and len(cp_digits) >= 4:
+            resultados_cp = _buscar_postal(cp_digits)
+        else:
+            resultados_cp = []
+
+        if resultados_cp:
+            opciones = [
+                f\"{r.get('municipio','-')} ({r.get('provincia_nombre_raw','-')})\"
+                for r in resultados_cp
+            ]
+            sel = st.selectbox(\"Sugerencias\", opciones, index=0)
+            idx = opciones.index(sel)
+            pick = resultados_cp[idx]
+            if pick:
+                st.session_state[f\"{key_prefix}_mun\"] = pick.get(\"municipio\") or municipio
+                st.session_state[f\"{key_prefix}_prov\"] = pick.get(\"provincia_nombre_raw\") or provincia
+                st.caption(\"Municipio/Provincia actualizados desde CP.\")
+
     with st.expander("Contacto principal", expanded=False):
         c1, c2 = st.columns(2)
         with c1:
@@ -164,7 +209,17 @@ def render_cliente_form(modo: str = "cliente"):
         codigocuentaimpagado = st.text_input("Codigo cuenta impagado", key=f"{key_prefix}_cci")
         remesahabitual = st.text_input("Remesa habitual", key=f"{key_prefix}_remesa")
 
-    colg, colx = st.columns([3, 1])
+    st.markdown("---")
+    prev_l, prev_r = st.columns([3, 1])
+    with prev_r:
+        with st.container(border=True):
+            st.caption("Vista previa")
+            st.write(razonsocial or nombre or "-")
+            st.write(cifdni or "-")
+            st.caption(f"{municipio or '-'} · {provincia or '-'} · {codigopostal or '-'}")
+            st.caption(f"Tel: {telefono or '-'} · Email: {contacto_email or '-'}")
+
+    colg, colx = prev_l.columns([3, 1])
     guardar_label = "Guardar cambios" if is_edit else "Guardar"
     guardar = colg.button(guardar_label, use_container_width=True, key=f"{key_prefix}_guardar")
     cancelar = colx.button("Salir", use_container_width=True, key=f"{key_prefix}_cancelar")
@@ -172,6 +227,13 @@ def render_cliente_form(modo: str = "cliente"):
     if cancelar:
         st.session_state["cli_show_form"] = None
         st.rerun()
+
+    if cifdni and len(_digits_only(cifdni)) < 8:
+        st.warning("CIF/DNI parece incompleto.")
+    if contacto_email and not _email_ok(contacto_email):
+        st.warning("Email no valido.")
+    if codigopostal and len(_digits_only(codigopostal)) < 4:
+        st.warning("Codigo postal parece corto.")
 
     if guardar:
         if not (razonsocial or nombre):
