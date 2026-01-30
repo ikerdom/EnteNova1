@@ -215,8 +215,8 @@ def _direccion_editor(
     st.markdown("---")
     with st.container(border=True):
         st.caption("Vista previa")
-        st.write(f\"{direccion or direccionfiscal or '-'}\") 
-        st.write(f\"{municipio or '-'} · {idprovincia or '-'} · {codigopostal or '-'}\")
+        st.write(f"{direccion or direccionfiscal or '-'}") 
+        st.write(f"{municipio or '-'} · {idprovincia or '-'} · {codigopostal or '-'}")
 
     payload = {
         "razonsocial": razonsocial.strip() or None,

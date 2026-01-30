@@ -382,7 +382,7 @@ def render_crm_acciones(_supabase_unused=None, clienteid: Optional[int] = None):
                     st.caption(f"Tipo: {tipo} · Cliente: {cliente}")
                 with c2:
                     st.markdown(
-                        f\"\"\"<div style=\"padding:4px 10px;border-radius:999px;background:{color};color:#fff;font-weight:700;text-align:center;\">{estado}</div>\"\"\",
+                        f"""<div style="padding:4px 10px;border-radius:999px;background:{color};color:#fff;font-weight:700;text-align:center;">{estado}</div>""",
                         unsafe_allow_html=True,
                     )
                 with c3:

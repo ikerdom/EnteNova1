@@ -90,7 +90,7 @@ def render_contacto_form(clienteid: int, key_prefix: str = ""):
             with cols[1]:
                 if es_principal:
                     st.markdown(
-                        \"\"\"<div style=\"padding:4px 8px;border-radius:999px;background:#dcfce7;color:#166534;font-weight:700;text-align:center;\">Principal</div>\"\"\",
+                        """<div style="padding:4px 8px;border-radius:999px;background:#dcfce7;color:#166534;font-weight:700;text-align:center;">Principal</div>""",
                         unsafe_allow_html=True,
                     )
 
@@ -140,7 +140,7 @@ def _contacto_editor(clienteid: int, c: Optional[Dict[str, Any]] = None, key_pre
         if valor and not re.match(r"^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", valor.strip()):
             st.warning("Email no valido.")
     if tipo in ("TELEFONO", "WHATSAPP"):
-        if valor and len(re.sub(r\"\\D+\", \"\", valor)) < 7:
+        if valor and len(re.sub(r"\D+", "", valor)) < 7:
             st.warning("Telefono parece corto.")
 
     col1, col2 = st.columns(2)

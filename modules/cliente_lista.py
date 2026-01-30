@@ -373,10 +373,10 @@ def _render_card(c: Dict[str, Any]):
             st.caption(f"{ident} · Cuenta {codcta} · Codigo {codcp}")
         with top_r:
             st.markdown(
-                f\"\"\"<div style=\"text-align:right;\">
-<span style=\"display:inline-block;padding:2px 8px;border-radius:999px;background:#e2e8f0;color:#0f172a;font-size:0.82rem;font-weight:600;\">{tipo}</span><br>
-<span style=\"display:inline-block;margin-top:4px;padding:2px 8px;border-radius:999px;background:#ecfdf5;color:#166534;font-size:0.82rem;font-weight:600;\">Grupo {grupo}</span>
-</div>\"\"\",
+                f"""<div style="text-align:right;">
+<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e2e8f0;color:#0f172a;font-size:0.82rem;font-weight:600;">{tipo}</span><br>
+<span style="display:inline-block;margin-top:4px;padding:2px 8px;border-radius:999px;background:#ecfdf5;color:#166534;font-size:0.82rem;font-weight:600;">Grupo {grupo}</span>
+</div>""",
                 unsafe_allow_html=True,
             )
 

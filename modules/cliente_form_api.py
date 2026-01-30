@@ -162,16 +162,16 @@ def render_cliente_form(modo: str = "cliente"):
 
         if resultados_cp:
             opciones = [
-                f\"{r.get('municipio','-')} ({r.get('provincia_nombre_raw','-')})\"
+                f"{r.get('municipio','-')} ({r.get('provincia_nombre_raw','-')})"
                 for r in resultados_cp
             ]
-            sel = st.selectbox(\"Sugerencias\", opciones, index=0)
+            sel = st.selectbox("Sugerencias", opciones, index=0)
             idx = opciones.index(sel)
             pick = resultados_cp[idx]
             if pick:
-                st.session_state[f\"{key_prefix}_mun\"] = pick.get(\"municipio\") or municipio
-                st.session_state[f\"{key_prefix}_prov\"] = pick.get(\"provincia_nombre_raw\") or provincia
-                st.caption(\"Municipio/Provincia actualizados desde CP.\")
+                st.session_state[f"{key_prefix}_mun"] = pick.get("municipio") or municipio
+                st.session_state[f"{key_prefix}_prov"] = pick.get("provincia_nombre_raw") or provincia
+                st.caption("Municipio/Provincia actualizados desde CP.")
 
     with st.expander("Contacto principal", expanded=False):
         c1, c2 = st.columns(2)

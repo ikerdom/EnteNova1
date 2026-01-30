@@ -19,8 +19,10 @@ def get_cloudia_base_url() -> str:
     _load_env()
     base = os.getenv("CLOUDIA_BASE_URL") or os.getenv("ORBE_CLOUDIA_BASE_URL")
     if not base:
-        raise RuntimeError("Falta CLOUDIA_BASE_URL/ORBE_CLOUDIA_BASE_URL en .env.")
+        base = "http://app.cloud-ia.es:8080"
+        print("[WARN] CLOUDIA_BASE_URL no definido. Usando valor por defecto.")
     base = str(base).strip().rstrip("/")
     if not base.startswith("http"):
-        raise RuntimeError("CLOUDIA_BASE_URL invalida. Debe empezar por http(s).")
+        print("[WARN] CLOUDIA_BASE_URL invalida. Usando valor por defecto.")
+        base = "http://app.cloud-ia.es:8080"
     return base
