@@ -21,6 +21,28 @@ def _safe(v: Any, default: str = "-") -> str:
     return default if v in (None, "", "null") else str(v)
 
 
+def _badge(label: str, *, bg: str = "#e2e8f0", color: str = "#0f172a") -> str:
+    return (
+        f"<span style='display:inline-block;padding:2px 10px;border-radius:999px;"
+        f"background:{bg};color:{color};font-size:0.82rem;font-weight:600;'>"
+        f"{label}</span>"
+    )
+
+
+def _tipo_ui(tipo: str) -> str:
+    t = (tipo or "accion").lower()
+    mapping = {
+        "llamada": ("📞 Llamada", "#e0f2fe", "#075985"),
+        "reunion": ("🧑‍💼 Reunión", "#fef9c3", "#854d0e"),
+        "email": ("✉️ Email", "#ede9fe", "#5b21b6"),
+        "whatsapp": ("💬 WhatsApp", "#dcfce7", "#166534"),
+        "otro": ("📝 Otro", "#f3f4f6", "#374151"),
+        "accion": ("📌 Acción", "#f3f4f6", "#374151"),
+    }
+    label, bg, color = mapping.get(t, ("📌 Acción", "#f3f4f6", "#374151"))
+    return _badge(label, bg=bg, color=color)
+
+
 def render_historial(supabase):
     st.header("Historial de comunicaciones")
     st.caption("Consulta y registra tus interacciones con clientes o contactos.")
@@ -223,6 +245,7 @@ def render_historial(supabase):
         st.info("No hay comunicaciones registradas todavia.")
     else:
         st.caption(f"Registros: {len(mensajes)}")
+
         contacto_ids = [m.get("cliente_contactoid") or m.get("contacto_id") for m in mensajes]
         contacto_map = {}
         if contacto_ids:
@@ -238,17 +261,62 @@ def render_historial(supabase):
             except Exception:
                 contacto_map = {}
 
+        tipos_count = {}
+        for m in mensajes:
+            t = (m.get("tipo_comunicacion") or m.get("canal") or "accion").lower()
+            tipos_count[t] = tipos_count.get(t, 0) + 1
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Total", len(mensajes))
+        m2.metric("Llamadas", tipos_count.get("llamada", 0))
+        m3.metric("Emails", tipos_count.get("email", 0))
+        m4.metric("WhatsApp", tipos_count.get("whatsapp", 0))
+
+        # Timeline simple por mes (últimos 12 meses visibles)
+        st.markdown("#### Timeline (últimos 12 meses)")
+        by_month: Dict[str, int] = {}
+        for m in mensajes:
+            fecha_raw = m.get("fecha_envio") or m.get("fecha_accion") or ""
+            fecha_txt = str(fecha_raw)[:10]
+            if len(fecha_txt) >= 7:
+                key = fecha_txt[:7]
+                by_month[key] = by_month.get(key, 0) + 1
+        months = sorted(by_month.keys())[-12:]
+        if months:
+            data = [{"Mes": k, "Registros": by_month[k]} for k in months]
+            try:
+                import pandas as pd
+
+                df = pd.DataFrame(data).set_index("Mes")
+                st.bar_chart(df, height=180)
+            except Exception:
+                st.table(data)
+
+        st.markdown(" ")
         for m in mensajes:
             fecha_raw = m.get("fecha_envio") or m.get("fecha_accion") or ""
             fecha_txt = str(fecha_raw)[:16].replace("T", " ")
             tipo = m.get("tipo_comunicacion") or m.get("canal") or "accion"
             contacto_id = m.get("cliente_contactoid") or m.get("contacto_id")
             contacto_nombre = contacto_map.get(contacto_id, "-")
+            titulo = _safe(m.get("titulo") or m.get("remitente") or "Comunicación")
+            cuerpo = _safe(m.get("contenido") or m.get("descripcion"))
 
-            with st.expander(f"{tipo.capitalize()} | {fecha_txt} | {contacto_nombre}"):
-                st.markdown(f"**Remitente:** {_safe(m.get('remitente'))}")
-                st.markdown(f"**Titulo:** {_safe(m.get('titulo'))}")
-                st.markdown(f"**Mensaje:** {_safe(m.get('contenido') or m.get('descripcion'))}")
+            with st.container(border=True):
+                c1, c2 = st.columns([3, 1])
+                with c1:
+                    st.markdown(_tipo_ui(tipo), unsafe_allow_html=True)
+                    st.markdown(f"**{titulo}**")
+                    st.caption(cuerpo[:180] + ("..." if len(cuerpo) > 180 else ""))
+                with c2:
+                    st.write("**Fecha**")
+                    st.write(fecha_txt or "-")
+                    st.write("**Contacto**")
+                    st.write(contacto_nombre)
+
+                with st.expander("Ver detalle"):
+                    st.markdown(f"**Remitente:** {_safe(m.get('remitente'))}")
+                    st.markdown(f"**Título:** {_safe(m.get('titulo'))}")
+                    st.markdown(f"**Mensaje:** {cuerpo}")
 
     st.markdown("---")
 

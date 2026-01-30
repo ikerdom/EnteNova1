@@ -1,6 +1,7 @@
 import math
 import os
-from typing import Any, Dict, List, Optional
+from datetime import date, timedelta
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 import requests
 import streamlit as st
@@ -41,6 +42,80 @@ def _price(v: Any):
         return f"{float(v):.2f} EUR"
     except Exception:
         return "-"
+
+
+def _as_int(v: Any) -> Optional[int]:
+    try:
+        if v in (None, "", "null"):
+            return None
+        return int(v)
+    except Exception:
+        return None
+
+
+def _chunked(items: Sequence[int], size: int = 200) -> Iterable[List[int]]:
+    for i in range(0, len(items), size):
+        yield list(items[i : i + size])
+
+
+def _load_albaran_ids_since(supa, since: date) -> List[int]:
+    try:
+        res = (
+            supa.table("albaran")
+            .select("albaran_id, fecha_albaran")
+            .gte("fecha_albaran", str(since))
+            .execute()
+        )
+        return [r.get("albaran_id") for r in res.data or [] if r.get("albaran_id")]
+    except Exception as e:
+        st.warning(f"No se pudieron cargar albaranes recientes: {e}")
+        return []
+
+
+def _load_albaran_fecha_map(supa, since: date) -> Dict[int, str]:
+    try:
+        res = (
+            supa.table("albaran")
+            .select("albaran_id, fecha_albaran")
+            .gte("fecha_albaran", str(since))
+            .execute()
+        )
+        out: Dict[int, str] = {}
+        for r in res.data or []:
+            alb_id = r.get("albaran_id")
+            fecha = r.get("fecha_albaran")
+            if alb_id and fecha:
+                out[int(alb_id)] = str(fecha)[:10]
+        return out
+    except Exception as e:
+        st.warning(f"No se pudieron cargar fechas de albarán: {e}")
+        return {}
+
+
+def _load_albaran_lineas_for_producto(supa, product_id: int, albaran_ids: List[int]) -> List[dict]:
+    if not albaran_ids:
+        return []
+
+    rows: List[dict] = []
+    for chunk in _chunked(albaran_ids, size=200):
+        q = (
+            supa.table("albaran_linea")
+            .select("albaran_id, cantidad, importe_total_linea, idproducto, producto_id, producto_id_origen")
+            .in_("albaran_id", chunk)
+        )
+        try:
+            q = q.or_(
+                f"idproducto.eq.{product_id},producto_id.eq.{product_id},producto_id_origen.eq.{product_id}"
+            )
+            res = q.execute()
+        except Exception:
+            try:
+                res = q.eq("idproducto", product_id).execute()
+            except Exception as e:
+                st.warning(f"No se pudieron cargar líneas de albarán: {e}")
+                return rows
+        rows.extend(res.data or [])
+    return rows
 
 
 # ======================================================
@@ -193,7 +268,7 @@ def render_producto_lista(supabase=None):
     # Ficha prioritaria si seleccionada
     sel = st.session_state.get("prod_detalle_id")
     if sel:
-        _render_modal_producto(sel)
+        _render_modal_producto(sel, supabase or st.session_state.get("supa"))
         st.markdown("---")
 
     if not productos:
@@ -310,7 +385,7 @@ def _render_tabla_productos(productos: list):
             st.rerun()
 
 
-def _render_modal_producto(productoid: int):
+def _render_modal_producto(productoid: int, supabase=None):
     try:
         res = requests.get(f"{_api_base()}/api/productos/{productoid}", timeout=15)
         res.raise_for_status()
@@ -344,7 +419,7 @@ def _render_modal_producto(productoid: int):
 
     st.markdown("### Identificadores")
     d1, d2, d3 = st.columns(3)
-    d1.write(f"**ID catalogo:** {p.get('catalogo_productoid') or '-'}")
+    d1.write(f"**ID catálogo:** {p.get('catalogo_productoid') or '-'}")
     d2.write(f"**ID producto:** {p.get('idproducto') or '-'}")
     d3.write(f"**Ref. producto:** {p.get('idproductoreferencia') or '-'}")
 
@@ -353,13 +428,68 @@ def _render_modal_producto(productoid: int):
     d5.write(f"**EAN:** {p.get('ean') or '-'}")
 
     st.markdown("### Portada")
-    if portada:
-        st.image(portada, use_container_width=True)
-    else:
-        st.info("Sin portada")
+    img_col, info_col = st.columns([1, 2])
+    with img_col:
+        if portada:
+            st.image(portada, width=240)
+        else:
+            st.info("Sin portada")
+    with info_col:
+        st.markdown("**Descripción**")
+        st.write(p.get("descripcion") or "Sin descripción.")
 
-    st.markdown("### Descripcion")
-    st.write(p.get("descripcion") or "Sin descripcion.")
+    st.markdown("### Ventas en albaranes")
+    if not supabase:
+        st.info("Conecta Supabase para ver métricas de ventas.")
+    else:
+        years_opts = [1, 2, 3, 5]
+        years = st.selectbox(
+            "Periodo",
+            options=years_opts,
+            index=1,
+            key=f"prod_sales_years_{productoid}",
+        )
+        since = date.today() - timedelta(days=365 * int(years))
+        pid = (
+            _as_int(p.get("idproducto"))
+            or _as_int(p.get("productoid"))
+            or _as_int(p.get("catalogo_productoid"))
+        )
+        if not pid:
+            st.info("No se encontró un ID de producto válido para cruzar albaranes.")
+        else:
+            alb_ids = _load_albaran_ids_since(supabase, since)
+            fecha_map = _load_albaran_fecha_map(supabase, since)
+            lineas = _load_albaran_lineas_for_producto(supabase, pid, alb_ids)
+            total_qty = sum(float(r.get("cantidad") or 0) for r in lineas)
+            total_imp = sum(float(r.get("importe_total_linea") or 0) for r in lineas)
+            total_alb = len({r.get("albaran_id") for r in lineas if r.get("albaran_id")})
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Líneas", len(lineas))
+            m2.metric("Albaranes", total_alb)
+            m3.metric("Unidades", f"{total_qty:,.0f}".replace(",", "."))
+            st.caption(f"Importe total: {total_imp:,.2f} EUR desde {since.isoformat()}")
+
+            if lineas and fecha_map:
+                st.markdown("#### Evolución mensual")
+                by_month: Dict[str, float] = {}
+                for r in lineas:
+                    alb_id = r.get("albaran_id")
+                    fecha = fecha_map.get(int(alb_id)) if alb_id else None
+                    if not fecha:
+                        continue
+                    month = fecha[:7]
+                    by_month[month] = by_month.get(month, 0.0) + float(r.get("cantidad") or 0)
+
+                months = sorted(by_month.keys())
+                data = [{"Mes": m, "Unidades": by_month[m]} for m in months]
+                try:
+                    import pandas as pd
+
+                    df = pd.DataFrame(data).set_index("Mes")
+                    st.line_chart(df, height=220)
+                except Exception:
+                    st.table(data)
 
     if st.button("Cerrar ficha", key=f"cerrar_prod_{productoid}", width="stretch"):
         st.session_state["prod_detalle_id"] = None

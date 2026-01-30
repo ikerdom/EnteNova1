@@ -238,6 +238,7 @@ def render_cliente_lista(API_URL: str):
     if sel:
         _render_ficha_panel(sel)
         st.markdown("---")
+        st.subheader("Catálogo de clientes")
 
     with st.expander("Filtros avanzados", expanded=False):
         f1, f2, f3 = st.columns(3)
@@ -434,16 +435,58 @@ def _render_ficha_panel(clienteid: int):
             ]
         )
         with tabs[0]:
-            st.write(f"**Razon social:** {cli.get('razonsocial') or cli.get('nombre') or '-'}")
-            st.write(f"**CIF/DNI:** {cli.get('cifdni') or '-'}")
-            st.write(f"**Codigo cuenta:** {cli.get('codigocuenta') or '-'}")
-            st.write(f"**Codigo cliente/proveedor:** {cli.get('codigoclienteoproveedor') or '-'}")
-            st.write(f"**Tipo:** {cli.get('clienteoproveedor') or '-'}")
-            st.write(f"**Grupo ID:** {cli.get('idgrupo') or '-'}")
-            with st.expander("Direccion", expanded=False):
-                _render_dir_summary(df)
-            with st.expander("Contacto principal", expanded=False):
-                st.write(cp or {})
+            tipo = cli.get("clienteoproveedor") or "-"
+            grupo = cli.get("idgrupo") or "-"
+            razon = cli.get("razonsocial") or cli.get("nombre") or "-"
+
+            top_l, top_r = st.columns([3, 1])
+            with top_l:
+                st.markdown(f"### {razon}")
+            with top_r:
+                st.markdown(
+                    f"""<div style="text-align:right;">
+<span style="display:inline-block;padding:4px 10px;border-radius:999px;background:#e2e8f0;color:#0f172a;font-size:0.82rem;font-weight:600;">{tipo}</span><br>
+<span style="display:inline-block;margin-top:6px;padding:4px 10px;border-radius:999px;background:#ecfdf5;color:#166534;font-size:0.82rem;font-weight:600;">Grupo {grupo}</span>
+</div>""",
+                    unsafe_allow_html=True,
+                )
+
+            kpi1, kpi2, kpi3 = st.columns(3)
+            kpi1.metric("CIF/DNI", cli.get("cifdni") or "-")
+            kpi2.metric("Cuenta", cli.get("codigocuenta") or "-")
+            kpi3.metric("Código C/P", cli.get("codigoclienteoproveedor") or "-")
+
+            st.markdown("### Datos principales")
+            left, right = st.columns(2)
+            with left:
+                _render_kv_block(
+                    [
+                        ("Razón social", cli.get("razonsocial") or cli.get("nombre")),
+                        ("Nombre comercial", cli.get("nombre")),
+                        ("Email", cli.get("email") or cli.get("correoelectronico")),
+                        ("Teléfono", cli.get("telefono") or cli.get("movil")),
+                    ]
+                )
+            with right:
+                _render_kv_block(
+                    [
+                        ("Tipo", tipo),
+                        ("Grupo", grupo),
+                        ("Web", cli.get("web")),
+                        ("Fecha alta", cli.get("fechaalta") or cli.get("fecha_alta")),
+                    ]
+                )
+
+            st.markdown("### Dirección y contacto")
+            d1, d2 = st.columns(2)
+            with d1:
+                with st.container(border=True):
+                    st.markdown("**Dirección principal**")
+                    _render_dir_summary(df)
+            with d2:
+                with st.container(border=True):
+                    st.markdown("**Contacto principal**")
+                    _render_contact_summary(cp)
 
         st.markdown("---")
         if st.button("Crear presupuesto para este cliente", key=f"cli_pres_{clienteid}", use_container_width=True):
@@ -490,5 +533,25 @@ def _render_dir_summary(df: dict):
 
         {cp} {municipio} ({provincia}) - {pais}
         """,
+    )
+
+
+def _render_kv_block(items: List[tuple]):
+    for label, value in items:
+        v = value if value not in (None, "", "null") else "-"
+        st.markdown(f"**{label}:** {v}")
+
+
+def _render_contact_summary(cp: dict):
+    if not cp:
+        st.info("Sin contacto")
+        return
+    _render_kv_block(
+        [
+            ("Nombre", cp.get("nombre") or cp.get("razonsocial")),
+            ("Cargo", cp.get("cargo")),
+            ("Email", cp.get("email") or cp.get("correoelectronico")),
+            ("Teléfono", cp.get("telefono") or cp.get("movil")),
+        ]
     )
 

@@ -5,6 +5,16 @@ import pandas as pd
 from modules.campania.campania_nav import render_campania_nav
 
 
+def _table_exists(supa, table: str) -> bool:
+    if not supa:
+        return False
+    try:
+        supa.table(table).select("*").limit(1).execute()
+        return True
+    except Exception:
+        return False
+
+
 # ======================================================
 # 📋 LISTADO PRINCIPAL DE CAMPAÑAS (Versión profesional)
 # ======================================================
@@ -19,6 +29,13 @@ def render(supa):
     st.title("📣 Campañas comerciales")
     st.caption("Gestiona campañas, consulta su avance y accede a informes.")
     st.divider()
+
+    if not _table_exists(supa, "campania"):
+        st.info("La tabla `campania` no existe en Supabase. Crea la tabla o desactiva este módulo.")
+        if st.button("Ocultar módulo de campañas", use_container_width=True):
+            st.session_state["menu_principal"] = "📊 Panel general"
+            st.rerun()
+        return
 
     # ======================================================
     # ➕ BOTÓN CREAR NUEVA CAMPAÑA
