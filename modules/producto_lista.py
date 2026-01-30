@@ -407,34 +407,33 @@ def _render_modal_producto(productoid: int, supabase=None):
     st.markdown("---")
     st.subheader(titulo)
 
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Precio", _price(p.get("pvp")))
-    c2.metric("Familia", p.get("familia") or "-")
-    c3.metric("Tipo", p.get("tipo") or "-")
-
-    c4, c5, c6 = st.columns(3)
-    c4.metric("Categoria", p.get("categoria") or "-")
-    c5.metric("Publico", "Si" if p.get("publico") else "No")
-    c6.metric("Publicacion", p.get("fecha_publicacion") or "-")
-
-    st.markdown("### Identificadores")
-    d1, d2, d3 = st.columns(3)
-    d1.write(f"**ID catálogo:** {p.get('catalogo_productoid') or '-'}")
-    d2.write(f"**ID producto:** {p.get('idproducto') or '-'}")
-    d3.write(f"**Ref. producto:** {p.get('idproductoreferencia') or '-'}")
-
-    d4, d5 = st.columns(2)
-    d4.write(f"**ISBN:** {p.get('isbn') or '-'}")
-    d5.write(f"**EAN:** {p.get('ean') or '-'}")
-
-    st.markdown("### Portada")
-    img_col, info_col = st.columns([1, 2])
-    with img_col:
+    left, right = st.columns([1, 2])
+    with left:
         if portada:
-            st.image(portada, width=240)
+            st.image(portada, width=260)
         else:
             st.info("Sin portada")
-    with info_col:
+    with right:
+        k1, k2, k3 = st.columns(3)
+        k1.metric("Precio", _price(p.get("pvp")))
+        k2.metric("Familia", p.get("familia") or "-")
+        k3.metric("Tipo", p.get("tipo") or "-")
+
+        k4, k5, k6 = st.columns(3)
+        k4.metric("Categoría", p.get("categoria") or "-")
+        k5.metric("Público", "Sí" if p.get("publico") else "No")
+        k6.metric("Publicación", p.get("fecha_publicacion") or "-")
+
+        st.markdown("**Identificadores**")
+        d1, d2, d3 = st.columns(3)
+        d1.write(f"**ID catálogo:** {p.get('catalogo_productoid') or '-'}")
+        d2.write(f"**ID producto:** {p.get('idproducto') or '-'}")
+        d3.write(f"**Ref. producto:** {p.get('idproductoreferencia') or '-'}")
+
+        d4, d5 = st.columns(2)
+        d4.write(f"**ISBN:** {p.get('isbn') or '-'}")
+        d5.write(f"**EAN:** {p.get('ean') or '-'}")
+
         st.markdown("**Descripción**")
         st.write(p.get("descripcion") or "Sin descripción.")
 
