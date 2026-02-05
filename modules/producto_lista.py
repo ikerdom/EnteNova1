@@ -100,7 +100,7 @@ def _load_albaran_lineas_for_producto(supa, product_id: int, albaran_ids: List[i
     for chunk in _chunked(albaran_ids, size=200):
         q = (
             supa.table("albaran_linea")
-            .select("albaran_id, cantidad, importe_total_linea, idproducto, producto_id, producto_id_origen")
+            .select("albaran_id, cantidad, subtotal, precio, descuento_pct, idproducto, producto_id, producto_id_origen")
             .in_("albaran_id", chunk)
         )
         try:
@@ -461,13 +461,13 @@ def _render_modal_producto(productoid: int, supabase=None):
             fecha_map = _load_albaran_fecha_map(supabase, since)
             lineas = _load_albaran_lineas_for_producto(supabase, pid, alb_ids)
             total_qty = sum(float(r.get("cantidad") or 0) for r in lineas)
-            total_imp = sum(float(r.get("importe_total_linea") or 0) for r in lineas)
+            total_imp = sum(float(r.get("subtotal") or 0) for r in lineas)
             total_alb = len({r.get("albaran_id") for r in lineas if r.get("albaran_id")})
             m1, m2, m3 = st.columns(3)
             m1.metric("Líneas", len(lineas))
             m2.metric("Albaranes", total_alb)
             m3.metric("Unidades", f"{total_qty:,.0f}".replace(",", "."))
-            st.caption(f"Importe total: {total_imp:,.2f} EUR desde {since.isoformat()}")
+            st.caption(f"Importe total (subtotal): {total_imp:,.2f} EUR desde {since.isoformat()}")
 
             if lineas and fecha_map:
                 st.markdown("#### Evolución mensual")

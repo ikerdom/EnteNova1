@@ -194,7 +194,7 @@ def render_cliente_lista(API_URL: str):
         "cli_sort_dir": "ASC",
         "cli_view": "Tarjetas",
         "cli_result_count": 0,
-        "cli_table_cols": ["clienteid", "razonsocial", "nombre", "cifdni"],
+        "cli_table_cols": ["razonsocial", "nombre", "cifdni"],
         "cli_page_size": 30,
     }
     for k, v in defaults.items():
@@ -266,7 +266,6 @@ def render_cliente_lista(API_URL: str):
 
         if st.session_state["cli_view"] == "Tabla":
             all_cols = [
-                "clienteid",
                 "razonsocial",
                 "nombre",
                 "cifdni",
@@ -332,7 +331,6 @@ def render_cliente_lista(API_URL: str):
             use_container_width=True,
             hide_index=True,
             column_config={
-                "clienteid": st.column_config.NumberColumn("ID", format="%d"),
                 "razonsocial": st.column_config.TextColumn("Razon social"),
                 "nombre": st.column_config.TextColumn("Nombre"),
                 "cifdni": st.column_config.TextColumn("CIF/DNI"),
@@ -342,6 +340,17 @@ def render_cliente_lista(API_URL: str):
                 "idgrupo": st.column_config.TextColumn("Grupo"),
             },
         )
+        opciones = [
+            (f"{c.get('razonsocial') or c.get('nombre') or 'Cliente'}", c.get("clienteid"))
+            for c in clientes
+            if c.get("clienteid") is not None
+        ]
+        if opciones:
+            label_map = {label: cid for label, cid in opciones}
+            elegido = st.selectbox("Abrir ficha de cliente", options=list(label_map.keys()))
+            if st.button("Ver ficha seleccionada", key="cli_table_open", use_container_width=True):
+                st.session_state["cliente_detalle_id"] = label_map[elegido]
+                st.rerun()
     else:
         cols = st.columns(3)
         for i, c in enumerate(clientes):
@@ -370,19 +379,32 @@ def _render_card(c: Dict[str, Any]):
     codcta = _safe(c.get("codigocuenta"))
     codcp = _safe(c.get("codigoclienteoproveedor"))
 
-    with st.container(border=True):
-        top_l, top_r = st.columns([3, 1])
-        with top_l:
-            st.markdown(f"**{razon}**")
-            st.caption(f"{ident} · Cuenta {codcta} · Codigo {codcp}")
-        with top_r:
-            st.markdown(
-                f"""<div style="text-align:right;">
-<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e2e8f0;color:#0f172a;font-size:0.82rem;font-weight:600;">{tipo}</span><br>
-<span style="display:inline-block;margin-top:4px;padding:2px 8px;border-radius:999px;background:#ecfdf5;color:#166534;font-size:0.82rem;font-weight:600;">Grupo {grupo}</span>
-</div>""",
-                unsafe_allow_html=True,
-            )
+    st.markdown(
+        f"""
+        <div style="border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-bottom:10px;
+                    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.05);min-height:118px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+                <div style="flex:1;min-width:0;">
+                    <div style="font-weight:700;line-height:1.1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+                        {razon}
+                    </div>
+                    <div style="color:#6b7280;font-size:.86rem;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                        {ident} · Cuenta {codcta} · Código {codcp}
+                    </div>
+                </div>
+                <div style="text-align:right;min-width:90px;">
+                    <span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e2e8f0;color:#0f172a;font-size:0.82rem;font-weight:600;">
+                        {tipo}
+                    </span><br>
+                    <span style="display:inline-block;margin-top:4px;padding:2px 8px;border-radius:999px;background:#ecfdf5;color:#166534;font-size:0.82rem;font-weight:600;">
+                        Grupo {grupo}
+                    </span>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     cid = c.get("clienteid")
     b1, b2 = st.columns(2)
@@ -395,18 +417,25 @@ def _render_card(c: Dict[str, Any]):
             st.session_state["cli_show_form"] = "cliente"
             st.session_state["cliente_actual"] = cid
             st.rerun()
-    st.caption(f"ID {cid}")
 
 
 def _render_ficha_panel(clienteid: int):
+    top1, top2 = st.columns([2, 1])
+    with top1:
+        if st.button("Crear presupuesto para este cliente", key=f"cli_pres_{clienteid}", use_container_width=True):
+            st.session_state["pres_cli_prefill"] = int(clienteid)
+            st.session_state["show_creator"] = True
+            st.session_state["menu_principal"] = "💼 Gestion de presupuestos"
+            st.rerun()
+    with top2:
+        if st.button("Cerrar ficha", key=f"cerrar_cli_top_{clienteid}", use_container_width=True):
+            st.session_state["cliente_detalle_id"] = None
+            st.rerun()
+
     with st.container(border=True):
-        c1, c2 = st.columns([4, 1])
+        c1, _ = st.columns([4, 1])
         with c1:
             st.subheader(f"Ficha cliente {clienteid}")
-        with c2:
-            if st.button("Cerrar ficha", key=f"cerrar_cli_top_{clienteid}", use_container_width=True):
-                st.session_state["cliente_detalle_id"] = None
-                st.rerun()
 
         base = _api_base()
         try:
@@ -494,12 +523,6 @@ def _render_ficha_panel(clienteid: int):
                     st.markdown("**Contacto principal**")
                     _render_contact_summary(cp)
 
-        st.markdown("---")
-        if st.button("Crear presupuesto para este cliente", key=f"cli_pres_{clienteid}", use_container_width=True):
-            st.session_state["pres_cli_prefill"] = int(clienteid)
-            st.session_state["show_creator"] = True
-            st.session_state["menu_principal"] = "?? Gestion de presupuestos"
-            st.rerun()
         with tabs[1]:
             render_direccion_form(clienteid, key_prefix="panel_")
         with tabs[2]:
@@ -519,9 +542,6 @@ def _render_ficha_panel(clienteid: int):
         with tabs[9]:
             st.info("Historial disponible en próxima fase (modo API).")
 
-        if st.button("Cerrar ficha", key=f"cerrar_cli_{clienteid}", use_container_width=True):
-            st.session_state["cliente_detalle_id"] = None
-            st.rerun()
 
 
 def _render_dir_summary(df: dict):

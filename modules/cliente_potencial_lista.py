@@ -224,7 +224,7 @@ def render_cliente_potencial_lista():
         "pot_sort_dir": "ASC",
         "pot_view": "Tarjetas",
         "pot_result_count": 0,
-        "pot_table_cols": ["clienteid", "razonsocial", "nombre", "cifdni"],
+        "pot_table_cols": ["razonsocial", "nombre", "cifdni"],
     }
 
     for k, v in defaults.items():
@@ -295,7 +295,6 @@ def render_cliente_potencial_lista():
             )
         if st.session_state["pot_view"] == "Tabla":
             all_cols = [
-                "clienteid",
                 "razonsocial",
                 "nombre",
                 "cifdni",
@@ -403,6 +402,17 @@ def render_cliente_potencial_lista():
             rows.append(row)
 
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        opciones = [
+            (f"{c.get('razonsocial') or c.get('nombre') or 'Cliente'}", c.get("clienteid"))
+            for c in clientes
+            if c.get("clienteid") is not None
+        ]
+        if opciones:
+            label_map = {label: cid for label, cid in opciones}
+            elegido = st.selectbox("Abrir ficha de cliente", options=list(label_map.keys()), key="pot_table_open_sel")
+            if st.button("Ver ficha seleccionada", key="pot_table_open", use_container_width=True):
+                st.session_state["pot_detalle_id"] = label_map[elegido]
+                st.rerun()
 
     else:
 

@@ -21,7 +21,6 @@ from modules.crm_api import (
     actualizar as api_actualizar,
     catalogos as api_crm_catalogos,
 )
-from modules.pipeline_albaranes import can_run_today, run_pipeline, tail_log
 
 
 def _api_base():
@@ -234,28 +233,6 @@ def render_dashboard(supabase):
         """,
         unsafe_allow_html=True,
     )
-
-    # ------------------------------------------------------
-    # ALBARANES PIPELINE
-    # ------------------------------------------------------
-    can_run, last_run = can_run_today()
-    st.markdown("### Albaranes: refresco diario")
-    if last_run:
-        st.caption(f"Ultima ejecucion: {last_run.isoformat()}")
-    if not can_run:
-        st.info("Ya se ha ejecutado hoy.")
-
-    if st.button("Refrescar albaranes", disabled=not can_run):
-        with st.spinner("Ejecutando refresco..."):
-            ok, msg = run_pipeline()
-        if ok:
-            st.success(msg)
-        else:
-            st.error(msg)
-
-        log_tail = tail_log()
-        if log_tail:
-            st.code(log_tail)
 
     trabajadorid = st.session_state.get("trabajadorid")
     user = st.session_state.get("user_nombre", "Usuario")

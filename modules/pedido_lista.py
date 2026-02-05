@@ -22,6 +22,13 @@ def _safe(val, default="-"):
     return val if val not in (None, "", "null") else default
 
 
+def _truncate(text: str, max_len: int = 32) -> str:
+    if not text:
+        return "-"
+    txt = str(text)
+    return (txt[: max_len - 1] + "...") if len(txt) > max_len else txt
+
+
 def _label_from(catalog: dict, id_val) -> str:
     if not id_val:
         return "-"
@@ -167,14 +174,6 @@ def render_pedido_lista(_supabase=None):
         st.info("ℹ️ No hay pedidos que coincidan con los filtros.")
         return
 
-    if view == "Tarjetas":
-        cols = st.columns(3)
-        for idx, p in enumerate(pedidos):
-            with cols[idx % 3]:
-                _render_pedido_card(p, estados_rev, clientes_rev)
-    else:
-        _render_table(pedidos, estados_rev)
-
     if session.get("show_pedido_modal"):
         _render_pedido_modal(
             session.get("pedido_modal_id"),
@@ -182,6 +181,15 @@ def render_pedido_lista(_supabase=None):
             clientes_rev,
             formas_pago_rev,
         )
+        st.markdown("---")
+
+    if view == "Tarjetas":
+        cols = st.columns(3)
+        for idx, p in enumerate(pedidos):
+            with cols[idx % 3]:
+                _render_pedido_card(p, estados_rev, clientes_rev)
+    else:
+        _render_table(pedidos, estados_rev)
 
 
 def _render_table(pedidos: list[dict], estados_rev: dict):
@@ -204,13 +212,17 @@ def _render_pedido_card(p, estados_rev, clientes_rev):
     cliente_nombre = p.get("cliente") or clientes_rev.get(p.get("clienteid")) or "-"
     estado_nombre = estados_rev.get(p.get("pedido_estadoid")) or p.get("pedido_estado_nombre")
     color_estado = _color_estado(estado_nombre)
+    estado_lower = (estado_nombre or "").lower()
+    editable = ("borr" in estado_lower) or ("pend" in estado_lower)
 
     st.markdown(
         f"""
         <div style="border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-bottom:10px;
-                    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.05);min-height:120px;">
             <div style="display:flex;justify-content:space-between;align-items:center;">
-                <div><b>#{_safe(p.get('pedido_id'))}</b> · {_safe(cliente_nombre)}</div>
+                <div style="max-width:80%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                    <b>#{_safe(p.get('pedido_id'))}</b> · {_safe(_truncate(cliente_nombre))}
+                </div>
                 <span style="background:{color_estado};color:#fff;padding:3px 8px;border-radius:8px;font-size:0.8rem;">
                     {estado_nombre or '-'}
                 </span>
@@ -238,6 +250,7 @@ def _render_pedido_card(p, estados_rev, clientes_rev):
             "✏️ Editar",
             key=f"edit_{p['pedido_id']}",
             use_container_width=True,
+            disabled=not editable,
             on_click=(lambda pid=p["pedido_id"]: _abrir_edicion(pid)),
         )
     with colC:
