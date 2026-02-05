@@ -40,6 +40,12 @@ def _ensure_icon_css():
     st.markdown(
         """
         <style>
+        .card-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: -34px;
+            margin-bottom: 6px;
+        }
         .icon-btn button {
             border-radius: 999px !important;
             width: 36px !important;
@@ -378,13 +384,11 @@ def _render_card_producto(p: dict):
         height=175,
     )
     pid = p.get("catalogo_productoid")
-    b1, b2 = st.columns([6, 1])
-    with b2:
-        st.markdown('<div class="icon-btn">', unsafe_allow_html=True)
-        if st.button("🔍", key=f"prod_detalle_{pid}"):
-            st.session_state["prod_detalle_id"] = pid
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown('<div class="card-actions"><div class="icon-btn">', unsafe_allow_html=True)
+    if st.button("🔍", key=f"prod_detalle_{pid}"):
+        st.session_state["prod_detalle_id"] = pid
+        st.rerun()
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
 
 def _render_tabla_productos(productos: list):

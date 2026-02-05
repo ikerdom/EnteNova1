@@ -47,6 +47,12 @@ def _ensure_icon_css():
     st.markdown(
         """
         <style>
+        .card-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: -34px;
+            margin-bottom: 6px;
+        }
         .icon-btn button {
             border-radius: 999px !important;
             width: 36px !important;
@@ -337,14 +343,12 @@ def _render_card(r, estados_map: dict):
         else:
             st.caption(f"Total: {total_doc}")
 
-        b1, b2 = st.columns([6, 1])
-        with b2:
-            st.markdown('<div class="icon-btn">', unsafe_allow_html=True)
-            if st.button("🔍", key=f"pres_detalle_{pres_id}"):
-                st.session_state["presupuesto_modal_id"] = pres_id
-                st.session_state["show_presupuesto_modal"] = True
-                st.rerun()
-            st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown('<div class="card-actions"><div class="icon-btn">', unsafe_allow_html=True)
+        if st.button("🔍", key=f"pres_detalle_{pres_id}"):
+            st.session_state["presupuesto_modal_id"] = pres_id
+            st.session_state["show_presupuesto_modal"] = True
+            st.rerun()
+        st.markdown("</div></div>", unsafe_allow_html=True)
 
 
 def _render_table(rows):

@@ -85,6 +85,12 @@ def _ensure_icon_css():
     st.markdown(
         """
         <style>
+        .card-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: -34px;
+            margin-bottom: 6px;
+        }
         .icon-btn button {
             border-radius: 999px !important;
             width: 36px !important;
@@ -537,13 +543,11 @@ def _render_potencial_card(c: Dict[str, Any]):
         height=180,
     )
 
-    b1, b2 = st.columns([6, 1])
-    with b2:
-        st.markdown('<div class="icon-btn">', unsafe_allow_html=True)
-        if st.button("🔍", key=f"pot_detalle_{cid}"):
-            st.session_state["pot_detalle_id"] = cid
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown('<div class="card-actions"><div class="icon-btn">', unsafe_allow_html=True)
+    if st.button("🔍", key=f"pot_detalle_{cid}"):
+        st.session_state["pot_detalle_id"] = cid
+        st.rerun()
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
 
 def _render_modal_detalle_potencial(clienteid: int):

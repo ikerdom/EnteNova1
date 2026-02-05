@@ -36,6 +36,12 @@ def _ensure_icon_css():
     st.markdown(
         """
         <style>
+        .card-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: -34px;
+            margin-bottom: 6px;
+        }
         .icon-btn button {
             border-radius: 999px !important;
             width: 36px !important;
@@ -266,16 +272,14 @@ def _render_pedido_card(p, estados_rev, clientes_rev):
     )
 
     colA, colB, colC = st.columns(3)
-    b1, b2 = st.columns([6, 1])
-    with b2:
-        st.markdown('<div class="icon-btn">', unsafe_allow_html=True)
-        if st.button("🔍", key=f"detalle_{p['pedido_id']}"):
-            st.session_state["pedido_modal_id"] = p["pedido_id"]
-            st.session_state["show_pedido_modal"] = True
-            st.session_state["pedido_show_form"] = False
-            st.session_state["pedido_edit_open"] = False
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown('<div class="card-actions"><div class="icon-btn">', unsafe_allow_html=True)
+    if st.button("🔍", key=f"detalle_{p['pedido_id']}"):
+        st.session_state["pedido_modal_id"] = p["pedido_id"]
+        st.session_state["show_pedido_modal"] = True
+        st.session_state["pedido_show_form"] = False
+        st.session_state["pedido_edit_open"] = False
+        st.rerun()
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
 
 def _render_pedido_modal(
