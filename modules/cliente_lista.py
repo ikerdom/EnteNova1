@@ -103,6 +103,27 @@ def _safe(v, d: str = "-"):
     return v if v not in (None, "", "null") else d
 
 
+def _ensure_icon_css():
+    if st.session_state.get("icon_btn_css_loaded"):
+        return
+    st.session_state["icon_btn_css_loaded"] = True
+    st.markdown(
+        """
+        <style>
+        .icon-btn button {
+            border-radius: 999px !important;
+            width: 36px !important;
+            height: 36px !important;
+            padding: 0 !important;
+            min-height: 36px !important;
+        }
+        .icon-btn button p { margin: 0 !important; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 
 
 
@@ -168,10 +189,11 @@ def _api_get(path: str, params: Optional[dict] = None) -> dict:
 
 
 def render_cliente_lista(API_URL: str):
+    _ensure_icon_css()
     apply_orbe_theme()
 
     st.header("Gestion de clientes")
-    st.caption("Consulta, filtra y accede a la ficha completa de tus clientes.")
+    st.caption("Consulta, filtra y accede al detalle completo de tus clientes.")
 
     ctop1, ctop2 = st.columns(2)
     with ctop1:
@@ -240,7 +262,7 @@ def render_cliente_lista(API_URL: str):
 
     sel = st.session_state.get("cliente_detalle_id")
     if sel:
-        _render_ficha_panel(sel)
+        _render_detalle_panel(sel)
         st.markdown("---")
         st.subheader("Catálogo de clientes")
 
@@ -371,10 +393,12 @@ def render_cliente_lista(API_URL: str):
         ]
         if opciones:
             label_map = {label: cid for label, cid in opciones}
-            elegido = st.selectbox("Ficha de cliente", options=list(label_map.keys()))
-            if st.button("🔍", key="cli_table_open", use_container_width=True):
+            elegido = st.selectbox("Detalle de cliente", options=list(label_map.keys()))
+            st.markdown('<div class="icon-btn">', unsafe_allow_html=True)
+            if st.button("🔍", key="cli_table_open"):
                 st.session_state["cliente_detalle_id"] = label_map[elegido]
                 st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
     else:
         cols = st.columns(3)
         for i, c in enumerate(clientes):
@@ -439,12 +463,16 @@ def _render_card(c: Dict[str, Any]):
     contact_line = _safe(c.get("telefono") or c.get("movil"), "")
     if contact_line:
         st.caption(f"Contacto: {contact_line}")
-    if st.button("🔍", key=f"cli_ficha_{cid}", use_container_width=True):
-        st.session_state["cliente_detalle_id"] = cid
-        st.rerun()
+    b1, b2 = st.columns([6, 1])
+    with b2:
+        st.markdown('<div class="icon-btn">', unsafe_allow_html=True)
+        if st.button("🔍", key=f"cli_detalle_{cid}"):
+            st.session_state["cliente_detalle_id"] = cid
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
-def _render_ficha_panel(clienteid: int):
+def _render_detalle_panel(clienteid: int):
     top1, top2, top3 = st.columns([2, 1, 1])
     with top1:
         if st.button("Crear presupuesto para este cliente", key=f"cli_pres_{clienteid}", use_container_width=True):
@@ -458,14 +486,14 @@ def _render_ficha_panel(clienteid: int):
             st.session_state["cliente_actual"] = clienteid
             st.rerun()
     with top3:
-        if st.button("Cerrar ficha", key=f"cerrar_cli_top_{clienteid}", use_container_width=True):
+        if st.button("Cerrar detalle", key=f"cerrar_cli_top_{clienteid}", use_container_width=True):
             st.session_state["cliente_detalle_id"] = None
             st.rerun()
 
     with st.container(border=True):
         c1, _ = st.columns([4, 1])
         with c1:
-            st.subheader(f"Ficha cliente {clienteid}")
+            st.subheader(f"Detalle cliente {clienteid}")
 
         base = _api_base()
         try:
@@ -473,7 +501,7 @@ def _render_ficha_panel(clienteid: int):
             res.raise_for_status()
             data = res.json()
         except Exception as e:
-            st.error(f"Error cargando ficha: {e}")
+            st.error(f"Error cargando detalle: {e}")
             if st.button("Cerrar", key=f"cerrar_cli_err_{clienteid}"):
                 st.session_state["cliente_detalle_id"] = None
                 st.rerun()

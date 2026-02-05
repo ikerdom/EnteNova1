@@ -3,6 +3,27 @@
 import streamlit as st
 from modules.dashboard.utils import safe_time
 
+
+def _ensure_icon_css():
+    if st.session_state.get("icon_btn_css_loaded"):
+        return
+    st.session_state["icon_btn_css_loaded"] = True
+    st.markdown(
+        """
+        <style>
+        .icon-btn button {
+            border-radius: 999px !important;
+            width: 36px !important;
+            height: 36px !important;
+            padding: 0 !important;
+            min-height: 36px !important;
+        }
+        .icon-btn button p { margin: 0 !important; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
 def _can_complete(a):
     """
     Una actuación puede completarse si:
@@ -24,6 +45,7 @@ def render_actuacion_card(a, cliente_nombre=""):
     """
     clicked_view = False
     clicked_complete = False
+    _ensure_icon_css()
 
     desc = a.get("descripcion") or a.get("titulo") or "Actuación CRM"
     estado = (a.get("crm_actuacion_estado") or {}).get("estado") or a.get("estado") or "-"
@@ -58,8 +80,10 @@ def render_actuacion_card(a, cliente_nombre=""):
     col1, col2 = st.columns(2)
 
     with col1:
+        st.markdown('<div class="icon-btn">', unsafe_allow_html=True)
         if st.button("🔍", key=f"v_{a['crm_actuacionid']}"):
             clicked_view = True
+        st.markdown("</div>", unsafe_allow_html=True)
 
     if _can_complete(a):
         with col2:

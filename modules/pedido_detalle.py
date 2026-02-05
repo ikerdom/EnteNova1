@@ -5,7 +5,7 @@ from modules.incidencia_lista import render_incidencia_lista
 
 
 def render_pedido_detalle(_supabase_unused, pedido_id: int):
-    """Muestra la ficha completa de un pedido (solo API)."""
+    """Muestra el detalle completo de un pedido (solo API)."""
     try:
         pedido = detalle(pedido_id)
         if not pedido:

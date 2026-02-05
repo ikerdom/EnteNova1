@@ -78,6 +78,27 @@ def _safe(v: Any, default: str = "-") -> str:
     return default if v in (None, "", "null") else str(v)
 
 
+def _ensure_icon_css():
+    if st.session_state.get("icon_btn_css_loaded"):
+        return
+    st.session_state["icon_btn_css_loaded"] = True
+    st.markdown(
+        """
+        <style>
+        .icon-btn button {
+            border-radius: 999px !important;
+            width: 36px !important;
+            height: 36px !important;
+            padding: 0 !important;
+            min-height: 36px !important;
+        }
+        .icon-btn button p { margin: 0 !important; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 
 
 
@@ -180,6 +201,7 @@ def _api_post(path: str, json: Optional[dict] = None) -> Optional[dict]:
 def render_cliente_potencial_lista():
 
     apply_orbe_theme()
+    _ensure_icon_css()
 
 
 
@@ -405,15 +427,17 @@ def render_cliente_potencial_lista():
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
         opciones = [
             (f"{c.get('razonsocial') or c.get('nombre') or 'Cliente'}", c.get("clienteid"))
-            for c in clientes
+            for c in potenciales
             if c.get("clienteid") is not None
         ]
         if opciones:
             label_map = {label: cid for label, cid in opciones}
-            elegido = st.selectbox("Ficha de cliente", options=list(label_map.keys()), key="pot_table_open_sel")
-            if st.button("🔍", key="pot_table_open", use_container_width=True):
+            elegido = st.selectbox("Detalle de cliente", options=list(label_map.keys()), key="pot_table_open_sel")
+            st.markdown('<div class="icon-btn">', unsafe_allow_html=True)
+            if st.button("🔍", key="pot_table_open"):
                 st.session_state["pot_detalle_id"] = label_map[elegido]
                 st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
 
     else:
 
@@ -513,13 +537,17 @@ def _render_potencial_card(c: Dict[str, Any]):
         height=180,
     )
 
-    if st.button("🔍", key=f"pot_ficha_{cid}", use_container_width=True):
-        st.session_state["pot_detalle_id"] = cid
-        st.rerun()
+    b1, b2 = st.columns([6, 1])
+    with b2:
+        st.markdown('<div class="icon-btn">', unsafe_allow_html=True)
+        if st.button("🔍", key=f"pot_detalle_{cid}"):
+            st.session_state["pot_detalle_id"] = cid
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _render_modal_detalle_potencial(clienteid: int):
-    modal = Modal(key=f"modal_pot_{clienteid}", title=f"Ficha potencial {clienteid}", max_width=900)
+    modal = Modal(key=f"modal_pot_{clienteid}", title=f"Detalle potencial {clienteid}", max_width=900)
 
     if modal.is_open():
         try:
@@ -527,7 +555,7 @@ def _render_modal_detalle_potencial(clienteid: int):
             res.raise_for_status()
             data = res.json()
         except Exception as e:
-            st.error(f"Error cargando ficha: {e}")
+            st.error(f"Error cargando detalle: {e}")
             if st.button("Cerrar", key=f"cerrar_pot_err_{clienteid}"):
                 st.session_state["pot_detalle_id"] = None
                 modal.close()
@@ -592,7 +620,7 @@ def _render_modal_detalle_potencial(clienteid: int):
                     modal.close()
                     st.rerun()
         with colx2:
-            if st.button("Cerrar ficha", key=f"cerrar_pot_{clienteid}", use_container_width=True):
+            if st.button("Cerrar detalle", key=f"cerrar_pot_{clienteid}", use_container_width=True):
                 st.session_state["pot_detalle_id"] = None
                 modal.close()
                 st.rerun()

@@ -29,6 +29,27 @@ def _truncate(text: str, max_len: int = 32) -> str:
     return (txt[: max_len - 1] + "...") if len(txt) > max_len else txt
 
 
+def _ensure_icon_css():
+    if st.session_state.get("icon_btn_css_loaded"):
+        return
+    st.session_state["icon_btn_css_loaded"] = True
+    st.markdown(
+        """
+        <style>
+        .icon-btn button {
+            border-radius: 999px !important;
+            width: 36px !important;
+            height: 36px !important;
+            padding: 0 !important;
+            min-height: 36px !important;
+        }
+        .icon-btn button p { margin: 0 !important; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _label_from(catalog: dict, id_val) -> str:
     if not id_val:
         return "-"
@@ -70,6 +91,7 @@ def _abrir_edicion(pedido_id: int):
 
 
 def render_pedido_lista(_supabase=None):
+    _ensure_icon_css()
     st.header("📦 Gestión de pedidos")
     st.caption("Gestiona pedidos: cabecera, líneas, totales y observaciones vía API.")
 
@@ -244,12 +266,16 @@ def _render_pedido_card(p, estados_rev, clientes_rev):
     )
 
     colA, colB, colC = st.columns(3)
-    if st.button("🔍", key=f"ficha_{p['pedido_id']}", use_container_width=True):
-        st.session_state["pedido_modal_id"] = p["pedido_id"]
-        st.session_state["show_pedido_modal"] = True
-        st.session_state["pedido_show_form"] = False
-        st.session_state["pedido_edit_open"] = False
-        st.rerun()
+    b1, b2 = st.columns([6, 1])
+    with b2:
+        st.markdown('<div class="icon-btn">', unsafe_allow_html=True)
+        if st.button("🔍", key=f"detalle_{p['pedido_id']}"):
+            st.session_state["pedido_modal_id"] = p["pedido_id"]
+            st.session_state["show_pedido_modal"] = True
+            st.session_state["pedido_show_form"] = False
+            st.session_state["pedido_edit_open"] = False
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _render_pedido_modal(
@@ -262,7 +288,7 @@ def _render_pedido_modal(
         return
 
     st.markdown("---")
-    st.markdown("### 📄 Ficha del pedido")
+    st.markdown("### 📄 Detalle del pedido")
 
     try:
         p = detalle(pedido_id)
@@ -277,7 +303,7 @@ def _render_pedido_modal(
 
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1:
-        if st.button("↩️ Cerrar ficha", use_container_width=True):
+        if st.button("↩️ Cerrar detalle", use_container_width=True):
             st.session_state["show_pedido_modal"] = False
             st.session_state["pedido_modal_id"] = None
             st.rerun()
@@ -311,7 +337,7 @@ def _render_pedido_modal(
         except Exception as e:
             st.error(f"❌ Error al abrir el formulario de cabecera: {e}")
     else:
-        st.caption("Edición disponible en la ficha (botón Editar).")
+        st.caption("Edición disponible en el detalle (botón Editar).")
 
     st.markdown("---")
     st.subheader("📦 Líneas del pedido")

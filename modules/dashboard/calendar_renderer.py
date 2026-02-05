@@ -15,6 +15,29 @@ from modules.crm_api import actualizar as api_actualizar, catalogos as api_catal
 
 
 # ======================================================
+# ICON CSS
+# ======================================================
+def _ensure_icon_css():
+    if st.session_state.get("icon_btn_css_loaded"):
+        return
+    st.session_state["icon_btn_css_loaded"] = True
+    st.markdown(
+        """
+        <style>
+        .icon-btn button {
+            border-radius: 999px !important;
+            width: 36px !important;
+            height: 36px !important;
+            padding: 0 !important;
+            min-height: 36px !important;
+        }
+        .icon-btn button p { margin: 0 !important; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+# ======================================================
 # COLORES ESTADO
 # ======================================================
 COLOR_ESTADO = {
@@ -49,6 +72,7 @@ def render_calendar(
     """
     Dibuja el calendario semanal del dashboard.
     """
+    _ensure_icon_css()
 
     # -----------------------------------------
     # Filtrar por trabajador si aplica
@@ -177,10 +201,12 @@ def _render_actuacion_card(a, clientes_map, supabase, day_index):
 
     # Ver / editar
     with btn1:
+        st.markdown('<div class="icon-btn">', unsafe_allow_html=True)
         if st.button("🔍", key=f"btn_edit_{a['crm_actuacionid']}"):
             st.session_state["crm_actuacion_detalle_id"] = a["crm_actuacionid"]
             st.session_state["crm_open_day"] = day_index
             st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
     # Completar (solo si NO es bloque horario)
     if not bloque_horario and estado != "Completada":

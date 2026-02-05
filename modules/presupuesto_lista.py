@@ -40,6 +40,27 @@ def _truncate(text: str, max_len: int = 32) -> str:
     return (txt[: max_len - 1] + "...") if len(txt) > max_len else txt
 
 
+def _ensure_icon_css():
+    if st.session_state.get("icon_btn_css_loaded"):
+        return
+    st.session_state["icon_btn_css_loaded"] = True
+    st.markdown(
+        """
+        <style>
+        .icon-btn button {
+            border-radius: 999px !important;
+            width: 36px !important;
+            height: 36px !important;
+            padding: 0 !important;
+            min-height: 36px !important;
+        }
+        .icon-btn button p { margin: 0 !important; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _render_filter_chips(items):
     active = [(k, v) for k, v in items if v]
     if not active:
@@ -316,10 +337,14 @@ def _render_card(r, estados_map: dict):
         else:
             st.caption(f"Total: {total_doc}")
 
-        if st.button("🔍", key=f"pres_ficha_{pres_id}", use_container_width=True):
-            st.session_state["presupuesto_modal_id"] = pres_id
-            st.session_state["show_presupuesto_modal"] = True
-            st.rerun()
+        b1, b2 = st.columns([6, 1])
+        with b2:
+            st.markdown('<div class="icon-btn">', unsafe_allow_html=True)
+            if st.button("🔍", key=f"pres_detalle_{pres_id}"):
+                st.session_state["presupuesto_modal_id"] = pres_id
+                st.session_state["show_presupuesto_modal"] = True
+                st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _render_table(rows):
@@ -511,6 +536,7 @@ def _render_presupuesto_modal(estados_map: dict):
 
 def render_presupuesto_lista(api_base: Optional[str] = None):
     apply_orbe_theme()
+    _ensure_icon_css()
 
     defaults = {
         "pres_page": 1,

@@ -6,6 +6,27 @@ import streamlit as st
 from modules.orbe_theme import apply_orbe_theme
 
 
+def _ensure_icon_css():
+    if st.session_state.get("icon_btn_css_loaded"):
+        return
+    st.session_state["icon_btn_css_loaded"] = True
+    st.markdown(
+        """
+        <style>
+        .icon-btn button {
+            border-radius: 999px !important;
+            width: 36px !important;
+            height: 36px !important;
+            padding: 0 !important;
+            min-height: 36px !important;
+        }
+        .icon-btn button p { margin: 0 !important; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _price(v: Any) -> str:
     try:
         return f"{float(v):.2f} EUR"
@@ -80,15 +101,18 @@ def _render_producto_row(p: Dict[str, Any]):
         st.write(titulo)
         st.caption(f"Ref: {ref} | ID: {pid} | PVP: {precio}")
 
-    if st.button("🔍", key=f"tree_ficha_{pid}", use_container_width=True):
+    st.markdown('<div class="icon-btn">', unsafe_allow_html=True)
+    if st.button("🔍", key=f"tree_detalle_{pid}"):
         st.session_state["modo_producto"] = "Catalogo"
         st.session_state["prod_show_form"] = False
         st.session_state["prod_detalle_id"] = pid
         st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def render_arbol_productos(supabase):
     apply_orbe_theme()
+    _ensure_icon_css()
 
     st.subheader("Catalogo de productos - Vista arbol")
     st.caption("Navega por categorias y familias. Usa el buscador para filtrar.")

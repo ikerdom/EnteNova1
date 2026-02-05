@@ -224,7 +224,7 @@ def render_crm_acciones(_supabase_unused=None, clienteid: Optional[int] = None):
             cliente_sel_id = None
             if clienteid:
                 cliente_sel_id = clienteid
-                st.caption(f"Cliente fijo en esta ficha: {clienteid}")
+                st.caption(f"Cliente fijo en este detalle: {clienteid}")
             else:
                 cliente_search = st.text_input("Buscar cliente (opcional)", key="crm_cliente_search")
                 clientes_map = _load_clientes(cliente_search.strip())

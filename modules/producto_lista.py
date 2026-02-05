@@ -33,6 +33,27 @@ def _api_get(path: str, params: Optional[dict] = None) -> dict:
         return {}
 
 
+def _ensure_icon_css():
+    if st.session_state.get("icon_btn_css_loaded"):
+        return
+    st.session_state["icon_btn_css_loaded"] = True
+    st.markdown(
+        """
+        <style>
+        .icon-btn button {
+            border-radius: 999px !important;
+            width: 36px !important;
+            height: 36px !important;
+            padding: 0 !important;
+            min-height: 36px !important;
+        }
+        .icon-btn button p { margin: 0 !important; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _safe(v, d="-"):
     return v if v not in (None, "", "null") else d
 
@@ -123,9 +144,10 @@ def _load_albaran_lineas_for_producto(supa, product_id: int, albaran_ids: List[i
 # ======================================================
 def render_producto_lista(supabase=None):
     apply_orbe_theme()
+    _ensure_icon_css()
 
     st.header("Gestion de productos")
-    st.caption("Listado, filtros y acceso rapido a la ficha del producto.")
+    st.caption("Listado, filtros y acceso rapido al detalle del producto.")
 
     st.session_state.setdefault("prod_show_form", False)
     if st.session_state.get("prod_detalle_id"):
@@ -266,7 +288,7 @@ def render_producto_lista(supabase=None):
     total_pages = payload.get("total_pages", 1)
     st.session_state["prod_result_count"] = len(productos)
 
-    # Ficha prioritaria si seleccionada
+    # Detalle prioritario si seleccionado
     sel = st.session_state.get("prod_detalle_id")
     if sel:
         _render_modal_producto(sel, supabase or st.session_state.get("supa"))
@@ -356,9 +378,13 @@ def _render_card_producto(p: dict):
         height=175,
     )
     pid = p.get("catalogo_productoid")
-    if st.button("🔍", key=f"prod_ficha_{pid}", use_container_width=True):
-        st.session_state["prod_detalle_id"] = pid
-        st.rerun()
+    b1, b2 = st.columns([6, 1])
+    with b2:
+        st.markdown('<div class="icon-btn">', unsafe_allow_html=True)
+        if st.button("🔍", key=f"prod_detalle_{pid}"):
+            st.session_state["prod_detalle_id"] = pid
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _render_tabla_productos(productos: list):
@@ -374,7 +400,7 @@ def _render_tabla_productos(productos: list):
         rows.append(row)
     st.dataframe(rows, use_container_width=True, hide_index=True)
 
-    # Selector rapido para abrir ficha desde la tabla
+    # Selector rapido para abrir detalle desde la tabla
     opciones = [
         (f"{p.get('catalogo_productoid')} - {p.get('titulo_automatico')}", p.get("catalogo_productoid"))
         for p in productos
@@ -383,14 +409,16 @@ def _render_tabla_productos(productos: list):
     if opciones:
         label_map = {label: pid for label, pid in opciones}
         elegido = st.selectbox(
-            "Ficha de producto",
+            "Detalle de producto",
             options=list(label_map.keys()),
             index=0,
-            key="prod_sel_ficha",
+            key="prod_sel_detalle",
         )
-        if st.button("🔍", key="prod_sel_btn", width="stretch"):
+        st.markdown('<div class="icon-btn">', unsafe_allow_html=True)
+        if st.button("🔍", key="prod_sel_btn"):
             st.session_state["prod_detalle_id"] = label_map[elegido]
             st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _render_modal_producto(productoid: int, supabase=None):
@@ -399,7 +427,7 @@ def _render_modal_producto(productoid: int, supabase=None):
         res.raise_for_status()
         data = res.json() or {}
     except Exception as e:
-        st.error(f"Error cargando ficha de producto: {e}")
+        st.error(f"Error cargando detalle de producto: {e}")
         if st.button("Cerrar", key=f"cerrar_prod_err_{productoid}", width="stretch"):
             st.session_state["prod_detalle_id"] = None
             st.rerun()
@@ -506,7 +534,7 @@ def _render_modal_producto(productoid: int, supabase=None):
                 except Exception:
                     st.table(data)
 
-    if st.button("Cerrar ficha", key=f"cerrar_prod_{productoid}", width="stretch"):
+    if st.button("Cerrar detalle", key=f"cerrar_prod_{productoid}", width="stretch"):
         st.session_state["prod_detalle_id"] = None
         st.rerun()
 
