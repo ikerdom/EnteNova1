@@ -81,7 +81,8 @@ def render_pedido_lista(_supabase=None):
         "pedido_editar_id": None,
         "show_pedido_modal": False,
         "pedido_modal_id": None,
-        "pedido_compact": st.session_state.get("pref_compact", False),
+        "pedido_compact": st.session_state.get("pref_compact", True),
+        "pedido_edit_open": False,
     }
     for k, v in defaults.items():
         session.setdefault(k, v)
@@ -121,12 +122,6 @@ def render_pedido_lista(_supabase=None):
         forma_sel = st.selectbox("Forma de pago", ["Todas"] + list(formas_pago_map.keys()), key="pedido_pago")
     with colf4:
         view = st.radio("Vista", ["Tarjetas", "Tabla"], horizontal=True, key="pedido_view")
-    if view == "Tarjetas":
-        st.session_state["pedido_compact"] = st.checkbox(
-            "Vista compacta",
-            value=st.session_state.get("pedido_compact", st.session_state.get("pref_compact", False)),
-            help="Reduce altura y recorta textos para ver más tarjetas.",
-        )
 
     colf5, colf6 = st.columns([2, 2])
     with colf5:
@@ -249,22 +244,12 @@ def _render_pedido_card(p, estados_rev, clientes_rev):
     )
 
     colA, colB, colC = st.columns(3)
-    with colA:
-        if st.button("📄 Ficha", key=f"ficha_{p['pedido_id']}", use_container_width=True):
-            st.session_state["pedido_modal_id"] = p["pedido_id"]
-            st.session_state["show_pedido_modal"] = True
-            st.session_state["pedido_show_form"] = False
-            st.rerun()
-    with colB:
-        st.button(
-            "✏️ Editar",
-            key=f"edit_{p['pedido_id']}",
-            use_container_width=True,
-            disabled=not editable,
-            on_click=(lambda pid=p["pedido_id"]: _abrir_edicion(pid)),
-        )
-    with colC:
-        st.empty()
+    if st.button("🔍", key=f"ficha_{p['pedido_id']}", use_container_width=True):
+        st.session_state["pedido_modal_id"] = p["pedido_id"]
+        st.session_state["show_pedido_modal"] = True
+        st.session_state["pedido_show_form"] = False
+        st.session_state["pedido_edit_open"] = False
+        st.rerun()
 
 
 def _render_pedido_modal(
@@ -297,9 +282,11 @@ def _render_pedido_modal(
             st.session_state["pedido_modal_id"] = None
             st.rerun()
     with c2:
-        st.button("🗑️ Eliminar pedido", use_container_width=True, disabled=True)
+        if st.button("✏️ Editar", use_container_width=True, disabled=not editable):
+            st.session_state["pedido_edit_open"] = True
+            st.rerun()
     with c3:
-        st.empty()
+        st.button("🗑️ Eliminar", use_container_width=True, disabled=True)
 
     with st.expander("📋 Detalle general del pedido", expanded=True):
         col1, col2, col3 = st.columns(3)
@@ -317,11 +304,14 @@ def _render_pedido_modal(
             st.text(f"Ref. cliente: {_safe(p.get('referencia_cliente'))}")
 
     st.markdown("---")
-    st.subheader("✏️ Cabecera del pedido")
-    try:
-        render_pedido_form(None, pedidoid=pedido_id, on_saved_rerun=True)
-    except Exception as e:
-        st.error(f"❌ Error al abrir el formulario de cabecera: {e}")
+    if st.session_state.get("pedido_edit_open"):
+        st.subheader("✏️ Cabecera del pedido")
+        try:
+            render_pedido_form(None, pedidoid=pedido_id, on_saved_rerun=True)
+        except Exception as e:
+            st.error(f"❌ Error al abrir el formulario de cabecera: {e}")
+    else:
+        st.caption("Edición disponible en la ficha (botón Editar).")
 
     st.markdown("---")
     st.subheader("📦 Líneas del pedido")

@@ -316,7 +316,7 @@ def _render_card(r, estados_map: dict):
         else:
             st.caption(f"Total: {total_doc}")
 
-        if st.button("Ficha", key=f"pres_ficha_{pres_id}", use_container_width=True):
+        if st.button("🔍", key=f"pres_ficha_{pres_id}", use_container_width=True):
             st.session_state["presupuesto_modal_id"] = pres_id
             st.session_state["show_presupuesto_modal"] = True
             st.rerun()
@@ -525,7 +525,7 @@ def render_presupuesto_lista(api_base: Optional[str] = None):
         "pres_orden": "Últimos creados",
         "pres_result_count": 0,
         "pres_last_fingerprint": None,
-        "pres_compact": st.session_state.get("pref_compact", False),
+        "pres_compact": st.session_state.get("pref_compact", True),
     }
     for k, v in defaults.items():
         st.session_state.setdefault(k, v)
@@ -595,12 +595,6 @@ def render_presupuesto_lista(api_base: Optional[str] = None):
                     horizontal=True,
                     key="pres_view",
                 )
-                if st.session_state.get("pres_view") == "Tarjetas":
-                    st.session_state["pres_compact"] = st.checkbox(
-                        "Vista compacta",
-                        value=st.session_state.get("pres_compact", st.session_state.get("pref_compact", False)),
-                        help="Reduce altura y recorta textos para ver más tarjetas.",
-                    )
             with f6:
                 st.checkbox("Solo con lineas", key="pres_only_with_lines")
             with f7:

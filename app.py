@@ -103,13 +103,7 @@ if "user_email" in st.session_state:
         f"**Rol:** {rol} ({tipo})"
     )
     st.sidebar.markdown("---")
-    st.sidebar.subheader("Preferencias UI")
-    st.session_state.setdefault("pref_compact", False)
-    st.session_state["pref_compact"] = st.sidebar.checkbox(
-        "Vista compacta por defecto",
-        value=st.session_state.get("pref_compact", False),
-        help="Activa la vista compacta en listados con tarjetas.",
-    )
+    st.session_state.setdefault("pref_compact", True)
 else:
     st.sidebar.markdown("**No hay sesión iniciada.**")
     st.sidebar.markdown("---")

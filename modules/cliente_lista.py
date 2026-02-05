@@ -196,7 +196,7 @@ def render_cliente_lista(API_URL: str):
         "cli_result_count": 0,
         "cli_table_cols": ["razonsocial", "nombre", "cifdni"],
         "cli_page_size": 30,
-        "cli_compact": st.session_state.get("pref_compact", False),
+        "cli_compact": st.session_state.get("pref_compact", True),
     }
     for k, v in defaults.items():
         st.session_state.setdefault(k, v)
@@ -291,12 +291,6 @@ def render_cliente_lista(API_URL: str):
                 horizontal=True,
                 key="cli_sort_dir_table",
             )
-        else:
-            st.session_state["cli_compact"] = st.checkbox(
-                "Vista compacta",
-                value=st.session_state.get("cli_compact", st.session_state.get("pref_compact", False)),
-                help="Reduce altura y recorta textos para ver más tarjetas.",
-            )
 
     page = st.session_state["cli_page"]
     page_size = st.session_state.get("cli_page_size", 30)
@@ -354,8 +348,8 @@ def render_cliente_lista(API_URL: str):
         ]
         if opciones:
             label_map = {label: cid for label, cid in opciones}
-            elegido = st.selectbox("Abrir ficha de cliente", options=list(label_map.keys()))
-            if st.button("Ver ficha seleccionada", key="cli_table_open", use_container_width=True):
+            elegido = st.selectbox("Ficha de cliente", options=list(label_map.keys()))
+            if st.button("🔍", key="cli_table_open", use_container_width=True):
                 st.session_state["cliente_detalle_id"] = label_map[elegido]
                 st.rerun()
     else:
@@ -419,20 +413,13 @@ def _render_card(c: Dict[str, Any]):
     )
 
     cid = c.get("clienteid")
-    b1, b2 = st.columns(2)
-    with b1:
-        if st.button("Ficha", key=f"cli_ficha_{cid}", use_container_width=True):
-            st.session_state["cliente_detalle_id"] = cid
-            st.rerun()
-    with b2:
-        if st.button("Editar", key=f"cli_edit_{cid}", use_container_width=True):
-            st.session_state["cli_show_form"] = "cliente"
-            st.session_state["cliente_actual"] = cid
-            st.rerun()
+    if st.button("🔍", key=f"cli_ficha_{cid}", use_container_width=True):
+        st.session_state["cliente_detalle_id"] = cid
+        st.rerun()
 
 
 def _render_ficha_panel(clienteid: int):
-    top1, top2 = st.columns([2, 1])
+    top1, top2, top3 = st.columns([2, 1, 1])
     with top1:
         if st.button("Crear presupuesto para este cliente", key=f"cli_pres_{clienteid}", use_container_width=True):
             st.session_state["pres_cli_prefill"] = int(clienteid)
@@ -440,6 +427,11 @@ def _render_ficha_panel(clienteid: int):
             st.session_state["menu_principal"] = "💼 Gestion de presupuestos"
             st.rerun()
     with top2:
+        if st.button("Editar cliente", key=f"cli_edit_top_{clienteid}", use_container_width=True):
+            st.session_state["cli_show_form"] = "cliente"
+            st.session_state["cliente_actual"] = clienteid
+            st.rerun()
+    with top3:
         if st.button("Cerrar ficha", key=f"cerrar_cli_top_{clienteid}", use_container_width=True):
             st.session_state["cliente_detalle_id"] = None
             st.rerun()

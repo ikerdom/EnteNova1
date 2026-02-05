@@ -170,7 +170,7 @@ def render_producto_lista(supabase=None):
         "prod_view": "Tarjetas",
         "prod_result_count": 0,
         "prod_table_cols": ["catalogo_productoid", "titulo_automatico", "idproducto", "idproductoreferencia", "familia", "tipo", "categoria", "isbn", "ean", "pvp"],
-        "prod_compact": st.session_state.get("pref_compact", False),
+        "prod_compact": st.session_state.get("pref_compact", True),
     }
     for k, v in defaults.items():
         st.session_state.setdefault(k, v)
@@ -197,12 +197,6 @@ def render_producto_lista(supabase=None):
             st.session_state["prod_view"] = st.radio("Vista", ["Tarjetas", "Tabla"], horizontal=True)
             st.session_state["prod_sort_field"] = st.selectbox("Ordenar por", ["titulo_automatico", "idproducto", "idproductoreferencia", "isbn", "ean", "pvp"])
             st.session_state["prod_sort_dir"] = st.radio("Direccion", ["ASC", "DESC"], horizontal=True)
-            if st.session_state["prod_view"] == "Tarjetas":
-                st.session_state["prod_compact"] = st.checkbox(
-                    "Vista compacta",
-                    value=st.session_state.get("prod_compact", st.session_state.get("pref_compact", False)),
-                    help="Reduce altura y recorta textos para ver más tarjetas.",
-                )
         with f2:
             fam_labels = ["Todas"] + list(familias.keys())
             tipo_labels = ["Todos"] + list(tipos.keys())
@@ -362,11 +356,9 @@ def _render_card_producto(p: dict):
         height=175,
     )
     pid = p.get("catalogo_productoid")
-    b1, b2 = st.columns(2)
-    with b1:
-        if st.button("Ficha", key=f"prod_ficha_{pid}", width="stretch"):
-            st.session_state["prod_detalle_id"] = pid
-            st.rerun()
+    if st.button("🔍", key=f"prod_ficha_{pid}", use_container_width=True):
+        st.session_state["prod_detalle_id"] = pid
+        st.rerun()
 
 
 def _render_tabla_productos(productos: list):
@@ -391,12 +383,12 @@ def _render_tabla_productos(productos: list):
     if opciones:
         label_map = {label: pid for label, pid in opciones}
         elegido = st.selectbox(
-            "Abrir ficha de producto",
+            "Ficha de producto",
             options=list(label_map.keys()),
             index=0,
             key="prod_sel_ficha",
         )
-        if st.button("Ver ficha seleccionada", key="prod_sel_btn", width="stretch"):
+        if st.button("🔍", key="prod_sel_btn", width="stretch"):
             st.session_state["prod_detalle_id"] = label_map[elegido]
             st.rerun()
 
@@ -421,7 +413,15 @@ def _render_modal_producto(productoid: int, supabase=None):
         portada = ""
 
     st.markdown("---")
-    st.subheader(titulo)
+    top1, top2 = st.columns([3, 1])
+    with top1:
+        st.subheader(titulo)
+    with top2:
+        if st.button("✏️ Editar", key=f"prod_edit_{productoid}", use_container_width=True):
+            st.session_state["prod_show_form"] = True
+            st.session_state["prod_detalle_id"] = None
+            st.session_state["producto_actual"] = productoid
+            st.rerun()
 
     left, right = st.columns([1, 2])
     with left:

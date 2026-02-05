@@ -177,7 +177,7 @@ def _render_actuacion_card(a, clientes_map, supabase, day_index):
 
     # Ver / editar
     with btn1:
-        if st.button("Ver / editar", key=f"btn_edit_{a['crm_actuacionid']}"):
+        if st.button("🔍", key=f"btn_edit_{a['crm_actuacionid']}"):
             st.session_state["crm_actuacion_detalle_id"] = a["crm_actuacionid"]
             st.session_state["crm_open_day"] = day_index
             st.rerun()

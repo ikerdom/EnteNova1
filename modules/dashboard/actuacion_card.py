@@ -58,7 +58,7 @@ def render_actuacion_card(a, cliente_nombre=""):
     col1, col2 = st.columns(2)
 
     with col1:
-        if st.button("🔍 Ver / editar", key=f"v_{a['crm_actuacionid']}"):
+        if st.button("🔍", key=f"v_{a['crm_actuacionid']}"):
             clicked_view = True
 
     if _can_complete(a):

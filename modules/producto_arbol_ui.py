@@ -80,7 +80,7 @@ def _render_producto_row(p: Dict[str, Any]):
         st.write(titulo)
         st.caption(f"Ref: {ref} | ID: {pid} | PVP: {precio}")
 
-    if st.button("Ver ficha en catalogo", key=f"tree_ficha_{pid}", use_container_width=True):
+    if st.button("🔍", key=f"tree_ficha_{pid}", use_container_width=True):
         st.session_state["modo_producto"] = "Catalogo"
         st.session_state["prod_show_form"] = False
         st.session_state["prod_detalle_id"] = pid

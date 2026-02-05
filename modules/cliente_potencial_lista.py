@@ -225,7 +225,7 @@ def render_cliente_potencial_lista():
         "pot_view": "Tarjetas",
         "pot_result_count": 0,
         "pot_table_cols": ["razonsocial", "nombre", "cifdni"],
-        "pot_compact": st.session_state.get("pref_compact", False),
+        "pot_compact": st.session_state.get("pref_compact", True),
     }
 
     for k, v in defaults.items():
@@ -320,12 +320,6 @@ def render_cliente_potencial_lista():
                 horizontal=True,
                 key="pot_sort_dir_table",
             )
-        else:
-            st.session_state["pot_compact"] = st.checkbox(
-                "Vista compacta",
-                value=st.session_state.get("pot_compact", st.session_state.get("pref_compact", False)),
-                help="Reduce altura y recorta textos para ver más tarjetas.",
-            )
 
 
     # Params API
@@ -416,8 +410,8 @@ def render_cliente_potencial_lista():
         ]
         if opciones:
             label_map = {label: cid for label, cid in opciones}
-            elegido = st.selectbox("Abrir ficha de cliente", options=list(label_map.keys()), key="pot_table_open_sel")
-            if st.button("Ver ficha seleccionada", key="pot_table_open", use_container_width=True):
+            elegido = st.selectbox("Ficha de cliente", options=list(label_map.keys()), key="pot_table_open_sel")
+            if st.button("🔍", key="pot_table_open", use_container_width=True):
                 st.session_state["pot_detalle_id"] = label_map[elegido]
                 st.rerun()
 
@@ -519,24 +513,9 @@ def _render_potencial_card(c: Dict[str, Any]):
         height=180,
     )
 
-    b1, b2 = st.columns(2)
-    with b1:
-        if st.button("Ficha", key=f"pot_ficha_{cid}", use_container_width=True):
-            st.session_state["pot_detalle_id"] = cid
-            st.rerun()
-
-    with b2:
-        if st.button(
-            "Convertir",
-            disabled=tipo != "potencial",
-            key=f"pot_convert_{cid}",
-            use_container_width=True,
-        ):
-            with st.spinner("Convirtiendo..."):
-                res = _api_post(f"/api/clientes/{cid}/convertir")
-            if res:
-                st.success(res.get("mensaje", "Cliente convertido"))
-                st.rerun()
+    if st.button("🔍", key=f"pot_ficha_{cid}", use_container_width=True):
+        st.session_state["pot_detalle_id"] = cid
+        st.rerun()
 
 
 def _render_modal_detalle_potencial(clienteid: int):
@@ -602,10 +581,21 @@ def _render_modal_detalle_potencial(clienteid: int):
         with tabs[7]:
             st.info("Historial disponible en próxima fase (modo API).")
 
-        if st.button("Cerrar ficha", key=f"cerrar_pot_{clienteid}", use_container_width=True):
-            st.session_state["pot_detalle_id"] = None
-            modal.close()
-            st.rerun()
+        colx1, colx2 = st.columns(2)
+        with colx1:
+            if st.button("Convertir a cliente", key=f"pot_convert_{clienteid}", use_container_width=True):
+                with st.spinner("Convirtiendo..."):
+                    res = _api_post(f"/api/clientes/{clienteid}/convertir")
+                if res:
+                    st.success(res.get("mensaje", "Cliente convertido"))
+                    st.session_state["pot_detalle_id"] = None
+                    modal.close()
+                    st.rerun()
+        with colx2:
+            if st.button("Cerrar ficha", key=f"cerrar_pot_{clienteid}", use_container_width=True):
+                st.session_state["pot_detalle_id"] = None
+                modal.close()
+                st.rerun()
 
     modal.open()
 
