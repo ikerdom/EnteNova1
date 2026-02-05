@@ -196,6 +196,7 @@ def render_cliente_lista(API_URL: str):
         "cli_result_count": 0,
         "cli_table_cols": ["razonsocial", "nombre", "cifdni"],
         "cli_page_size": 30,
+        "cli_compact": st.session_state.get("pref_compact", False),
     }
     for k, v in defaults.items():
         st.session_state.setdefault(k, v)
@@ -290,6 +291,12 @@ def render_cliente_lista(API_URL: str):
                 horizontal=True,
                 key="cli_sort_dir_table",
             )
+        else:
+            st.session_state["cli_compact"] = st.checkbox(
+                "Vista compacta",
+                value=st.session_state.get("cli_compact", st.session_state.get("pref_compact", False)),
+                help="Reduce altura y recorta textos para ver más tarjetas.",
+            )
 
     page = st.session_state["cli_page"]
     page_size = st.session_state.get("cli_page_size", 30)
@@ -378,17 +385,22 @@ def _render_card(c: Dict[str, Any]):
     tipo = c.get("clienteoproveedor") or "-"
     codcta = _safe(c.get("codigocuenta"))
     codcp = _safe(c.get("codigoclienteoproveedor"))
+    compact = st.session_state.get("cli_compact", False)
+    min_h = "92px" if compact else "118px"
+    clamp = "1" if compact else "2"
+    pad = "10px" if compact else "12px"
+    sub_fs = "0.8rem" if compact else "0.86rem"
 
     st.markdown(
         f"""
-        <div style="border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-bottom:10px;
-                    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.05);min-height:118px;">
+        <div style="border:1px solid #e5e7eb;border-radius:12px;padding:{pad};margin-bottom:10px;
+                    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.05);min-height:{min_h};">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
                 <div style="flex:1;min-width:0;">
-                    <div style="font-weight:700;line-height:1.1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+                    <div style="font-weight:700;line-height:1.1;display:-webkit-box;-webkit-line-clamp:{clamp};-webkit-box-orient:vertical;overflow:hidden;">
                         {razon}
                     </div>
-                    <div style="color:#6b7280;font-size:.86rem;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                    <div style="color:#6b7280;font-size:{sub_fs};margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                         {ident} · Cuenta {codcta} · Código {codcp}
                     </div>
                 </div>

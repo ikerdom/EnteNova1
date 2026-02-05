@@ -81,6 +81,7 @@ def render_pedido_lista(_supabase=None):
         "pedido_editar_id": None,
         "show_pedido_modal": False,
         "pedido_modal_id": None,
+        "pedido_compact": st.session_state.get("pref_compact", False),
     }
     for k, v in defaults.items():
         session.setdefault(k, v)
@@ -120,6 +121,12 @@ def render_pedido_lista(_supabase=None):
         forma_sel = st.selectbox("Forma de pago", ["Todas"] + list(formas_pago_map.keys()), key="pedido_pago")
     with colf4:
         view = st.radio("Vista", ["Tarjetas", "Tabla"], horizontal=True, key="pedido_view")
+    if view == "Tarjetas":
+        st.session_state["pedido_compact"] = st.checkbox(
+            "Vista compacta",
+            value=st.session_state.get("pedido_compact", st.session_state.get("pref_compact", False)),
+            help="Reduce altura y recorta textos para ver más tarjetas.",
+        )
 
     colf5, colf6 = st.columns([2, 2])
     with colf5:
@@ -214,14 +221,17 @@ def _render_pedido_card(p, estados_rev, clientes_rev):
     color_estado = _color_estado(estado_nombre)
     estado_lower = (estado_nombre or "").lower()
     editable = ("borr" in estado_lower) or ("pend" in estado_lower)
+    compact = st.session_state.get("pedido_compact", False)
+    min_h = "100px" if compact else "120px"
+    clamp = "1" if compact else "2"
 
     st.markdown(
         f"""
         <div style="border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-bottom:10px;
-                    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.05);min-height:120px;">
+                    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.05);min-height:{min_h};">
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <div style="max-width:80%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                    <b>#{_safe(p.get('pedido_id'))}</b> · {_safe(_truncate(cliente_nombre))}
+                    <b>#{_safe(p.get('pedido_id'))}</b> · {_safe(_truncate(cliente_nombre, 28 if compact else 32))}
                 </div>
                 <span style="background:{color_estado};color:#fff;padding:3px 8px;border-radius:8px;font-size:0.8rem;">
                     {estado_nombre or '-'}

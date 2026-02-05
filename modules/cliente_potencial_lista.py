@@ -225,6 +225,7 @@ def render_cliente_potencial_lista():
         "pot_view": "Tarjetas",
         "pot_result_count": 0,
         "pot_table_cols": ["razonsocial", "nombre", "cifdni"],
+        "pot_compact": st.session_state.get("pref_compact", False),
     }
 
     for k, v in defaults.items():
@@ -318,6 +319,12 @@ def render_cliente_potencial_lista():
                 ["ASC", "DESC"],
                 horizontal=True,
                 key="pot_sort_dir_table",
+            )
+        else:
+            st.session_state["pot_compact"] = st.checkbox(
+                "Vista compacta",
+                value=st.session_state.get("pot_compact", st.session_state.get("pref_compact", False)),
+                help="Reduce altura y recorta textos para ver más tarjetas.",
             )
 
 
@@ -480,16 +487,20 @@ def _render_potencial_card(c: Dict[str, Any]):
     grupo = c.get("idgrupo") or "-"
     codcta = _safe(c.get("codigocuenta"))
     codcp = _safe(c.get("codigoclienteoproveedor"))
+    compact = st.session_state.get("pot_compact", False)
+    min_h = "120px" if compact else "150px"
+    clamp = "1" if compact else "2"
+    pad = "10px" if compact else "14px"
 
     st_html(
         f"""
         <div style="border:1px solid #e5e7eb;border-radius:14px;
-                    background:#f9fafb;padding:14px;margin-bottom:14px;
-                    box-shadow:0 1px 3px rgba(0,0,0,0.08);min-height:150px;">
+                    background:#f9fafb;padding:{pad};margin-bottom:14px;
+                    box-shadow:0 1px 3px rgba(0,0,0,0.08);min-height:{min_h};">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
                 <div style="flex:1;min-width:0;">
                     <div style="font-size:1.05rem;font-weight:700;line-height:1.1;
-                                display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+                                display:-webkit-box;-webkit-line-clamp:{clamp};-webkit-box-orient:vertical;overflow:hidden;">
                         {razon}
                     </div>
                     <div style="color:#6b7280;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">

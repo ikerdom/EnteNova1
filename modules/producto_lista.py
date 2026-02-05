@@ -170,6 +170,7 @@ def render_producto_lista(supabase=None):
         "prod_view": "Tarjetas",
         "prod_result_count": 0,
         "prod_table_cols": ["catalogo_productoid", "titulo_automatico", "idproducto", "idproductoreferencia", "familia", "tipo", "categoria", "isbn", "ean", "pvp"],
+        "prod_compact": st.session_state.get("pref_compact", False),
     }
     for k, v in defaults.items():
         st.session_state.setdefault(k, v)
@@ -196,6 +197,12 @@ def render_producto_lista(supabase=None):
             st.session_state["prod_view"] = st.radio("Vista", ["Tarjetas", "Tabla"], horizontal=True)
             st.session_state["prod_sort_field"] = st.selectbox("Ordenar por", ["titulo_automatico", "idproducto", "idproductoreferencia", "isbn", "ean", "pvp"])
             st.session_state["prod_sort_dir"] = st.radio("Direccion", ["ASC", "DESC"], horizontal=True)
+            if st.session_state["prod_view"] == "Tarjetas":
+                st.session_state["prod_compact"] = st.checkbox(
+                    "Vista compacta",
+                    value=st.session_state.get("prod_compact", st.session_state.get("pref_compact", False)),
+                    help="Reduce altura y recorta textos para ver más tarjetas.",
+                )
         with f2:
             fam_labels = ["Todas"] + list(familias.keys())
             tipo_labels = ["Todos"] + list(tipos.keys())
@@ -317,19 +324,23 @@ def _render_card_producto(p: dict):
         if portada
         else "<div style='display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:#94a3b8;'>Sin portada</div>"
     )
+    compact = st.session_state.get("prod_compact", False)
+    min_h = "150px" if compact else "165px"
+    clamp = "1" if compact else "2"
+    pad = "10px" if compact else "12px"
 
     st_html(
         f"""
         <div style="border:1px solid #e5e7eb;border-radius:12px;
-                    background:#f9fafb;padding:12px;margin-bottom:14px;
-                    box-shadow:0 1px 3px rgba(0,0,0,0.08);min-height:165px;">
+                    background:#f9fafb;padding:{pad};margin-bottom:14px;
+                    box-shadow:0 1px 3px rgba(0,0,0,0.08);min-height:{min_h};">
             <div style="display:flex;gap:12px;">
                 <div style="width:{W}px;height:{H}px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;background:#fff;">
                     {portada_html}
                 </div>
                 <div style="flex:1;min-width:0;">
                     <div style="font-size:1.05rem;font-weight:700;line-height:1.1;
-                                display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+                                display:-webkit-box;-webkit-line-clamp:{clamp};-webkit-box-orient:vertical;overflow:hidden;">
                         {nombre}
                     </div>
                     <div style="color:#6b7280;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">

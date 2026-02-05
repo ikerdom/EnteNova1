@@ -280,6 +280,8 @@ def _render_card(r, estados_map: dict):
     iva_total = r.get("iva_total")
     total_doc = r.get("total_documento") or r.get("total_estimada")
     num_lineas = r.get("num_lineas")
+    compact = st.session_state.get("pres_compact", False)
+    min_h = "110px" if compact else "140px"
 
     with card():
         st.markdown(
@@ -301,7 +303,7 @@ def _render_card(r, estados_map: dict):
 
         st.markdown(
             f"""
-            <div style="min-height:38px;color:#6b7280;font-size:.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            <div style="min-height:{min_h};color:#6b7280;font-size:.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                 Cliente: {_truncate(cliente_label, 40)} | Fecha: {fecha}
             </div>
             """,
@@ -523,6 +525,7 @@ def render_presupuesto_lista(api_base: Optional[str] = None):
         "pres_orden": "Últimos creados",
         "pres_result_count": 0,
         "pres_last_fingerprint": None,
+        "pres_compact": st.session_state.get("pref_compact", False),
     }
     for k, v in defaults.items():
         st.session_state.setdefault(k, v)
@@ -592,6 +595,12 @@ def render_presupuesto_lista(api_base: Optional[str] = None):
                     horizontal=True,
                     key="pres_view",
                 )
+                if st.session_state.get("pres_view") == "Tarjetas":
+                    st.session_state["pres_compact"] = st.checkbox(
+                        "Vista compacta",
+                        value=st.session_state.get("pres_compact", st.session_state.get("pref_compact", False)),
+                        help="Reduce altura y recorta textos para ver más tarjetas.",
+                    )
             with f6:
                 st.checkbox("Solo con lineas", key="pres_only_with_lines")
             with f7:
