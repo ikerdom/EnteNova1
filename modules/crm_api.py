@@ -31,3 +31,8 @@ def actualizar(accionid: int, payload: dict) -> dict:
 def detalle(accionid: int) -> dict:
     r = requests.get(f"{get_api_base()}/api/crm/acciones/{accionid}", timeout=15)
     return _handle(r)
+
+
+def catalogos() -> dict:
+    r = requests.get(f"{get_api_base()}/api/crm/catalogos", timeout=15)
+    return _handle(r)

@@ -10,7 +10,13 @@ import uuid
 import streamlit as st
 from dateutil.parser import parse as parse_date
 
-from modules.crm_api import listar as api_listar, crear as api_crear, actualizar as api_actualizar
+from modules.crm_api import (
+    listar as api_listar,
+    crear as api_crear,
+    actualizar as api_actualizar,
+    catalogos as api_catalogos,
+)
+from modules.api_base import get_api_base
 from modules.crm_accion_detalle import render_crm_accion_detalle
 
 try:
@@ -75,18 +81,13 @@ def _to_event(row: dict) -> dict:
     }
 
 
-def _load_trabajadores(supabase) -> Dict[str, int]:
-    if not supabase:
-        return {}
+def _load_trabajadores() -> Dict[str, int]:
     try:
-        rows = (
-            supabase.table("trabajador")
-            .select("trabajadorid,nombre,apellidos")
-            .order("nombre")
-            .execute()
-            .data
-            or []
-        )
+        import requests
+
+        r = requests.get(f"{get_api_base()}/api/catalogos/trabajadores", timeout=15)
+        r.raise_for_status()
+        rows = r.json() or []
     except Exception:
         return {}
 
@@ -99,50 +100,31 @@ def _load_trabajadores(supabase) -> Dict[str, int]:
     return out
 
 
-def _load_estados_tipos(supabase) -> tuple[Dict[str, int], Dict[str, int]]:
-    if not supabase:
-        return {}, {}
+def _load_estados_tipos() -> tuple[Dict[str, int], Dict[str, int]]:
     try:
-        estados = (
-            supabase.table("crm_actuacion_estado")
-            .select("crm_actuacion_estadoid, estado")
-            .eq("habilitado", True)
-            .order("estado")
-            .execute()
-            .data
-            or []
-        )
-        tipos = (
-            supabase.table("crm_actuacion_tipo")
-            .select("crm_actuacion_tipoid, tipo")
-            .eq("habilitado", True)
-            .order("tipo")
-            .execute()
-            .data
-            or []
-        )
+        cats = api_catalogos() or {}
     except Exception:
-        return {}, {}
-
-    estados_map = {e["estado"]: e["crm_actuacion_estadoid"] for e in estados}
-    tipos_map = {t["tipo"]: t["crm_actuacion_tipoid"] for t in tipos}
+        cats = {}
+    estados = cats.get("estados") or []
+    tipos = cats.get("tipos") or []
+    estados_map = {e.get("estado"): e.get("crm_actuacion_estadoid") for e in estados if e.get("crm_actuacion_estadoid") is not None}
+    tipos_map = {t.get("tipo"): t.get("crm_actuacion_tipoid") for t in tipos if t.get("crm_actuacion_tipoid") is not None}
     return estados_map, tipos_map
 
 
-def _load_clientes(supabase, search: str) -> Dict[str, int]:
-    if not supabase or not search:
+def _load_clientes(search: str) -> Dict[str, int]:
+    if not search:
         return {}
     try:
-        rows = (
-            supabase.table("cliente")
-            .select("clienteid, razonsocial, nombre")
-            .ilike("razonsocial", f"%{search}%")
-            .order("razonsocial")
-            .limit(40)
-            .execute()
-            .data
-            or []
+        import requests
+
+        r = requests.get(
+            f"{get_api_base()}/api/clientes",
+            params={"q": search, "page": 1, "page_size": 40},
+            timeout=15,
         )
+        r.raise_for_status()
+        rows = (r.json() or {}).get("data", [])
     except Exception:
         return {}
 
@@ -156,11 +138,6 @@ def _load_clientes(supabase, search: str) -> Dict[str, int]:
 def render_crm_acciones(_supabase_unused=None, clienteid: Optional[int] = None):
     st.markdown(_CSS, unsafe_allow_html=True)
 
-    supa = st.session_state.get("supa")
-    if _supabase_unused is not None:
-        supa = _supabase_unused
-        st.session_state["supa"] = supa
-
     if not _HAS_CAL:
         st.error("Falta dependencia `streamlit-calendar`. Instala con: `pip install streamlit-calendar`.")
         return
@@ -173,8 +150,8 @@ def render_crm_acciones(_supabase_unused=None, clienteid: Optional[int] = None):
     if clienteid is None:
         clienteid = st.session_state.get("cliente_actual")
 
-    estados_map, tipos_map = _load_estados_tipos(supa)
-    trabajadores_map = _load_trabajadores(supa)
+    estados_map, tipos_map = _load_estados_tipos()
+    trabajadores_map = _load_trabajadores()
 
     top_l, top_c, top_r = st.columns([2, 3, 2])
     with top_l:
@@ -250,7 +227,7 @@ def render_crm_acciones(_supabase_unused=None, clienteid: Optional[int] = None):
                 st.caption(f"Cliente fijo en esta ficha: {clienteid}")
             else:
                 cliente_search = st.text_input("Buscar cliente (opcional)", key="crm_cliente_search")
-                clientes_map = _load_clientes(supa, cliente_search.strip())
+                clientes_map = _load_clientes(cliente_search.strip())
                 if clientes_map:
                     cliente_label = st.selectbox(
                         "Cliente",
@@ -422,7 +399,7 @@ def render_crm_acciones(_supabase_unused=None, clienteid: Optional[int] = None):
         suffix = str(uuid.uuid4())[:8]
         st.markdown("---")
         st.subheader("Detalle de la accion seleccionada")
-        render_crm_accion_detalle(supa, eid)
+        render_crm_accion_detalle(None, eid)
 
         st.markdown("Acciones rapidas")
         with st.expander("Posponer accion", expanded=False):

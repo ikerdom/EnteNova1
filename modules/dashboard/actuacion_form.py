@@ -4,71 +4,54 @@ import streamlit as st
 from datetime import date, datetime, time
 
 from modules.dashboard.utils import cliente_autocomplete
-from modules.crm_api import crear as api_crear, actualizar as api_actualizar
+from modules.crm_api import (
+    crear as api_crear,
+    actualizar as api_actualizar,
+    catalogos as api_catalogos,
+)
+from modules.api_base import get_api_base
 
 
-def _load_estados(supabase):
-    if not supabase:
-        return {}, []
+def _load_estados(_supabase_unused):
     try:
-        rows = (
-            supabase.table("crm_actuacion_estado")
-            .select("crm_actuacion_estadoid, estado")
-            .order("estado")
-            .execute()
-            .data
-            or []
-        )
-        estado_map = {r["estado"]: r["crm_actuacion_estadoid"] for r in rows}
+        cats = api_catalogos() or {}
+        rows = cats.get("estados") or []
+        estado_map = {r.get("estado"): r.get("crm_actuacion_estadoid") for r in rows if r.get("crm_actuacion_estadoid") is not None}
         labels = list(estado_map.keys())
         return estado_map, labels
     except Exception:
         return {}, []
 
 
-def _load_tipos(supabase):
-    if not supabase:
-        return {}, []
+def _load_tipos(_supabase_unused):
     try:
-        rows = (
-            supabase.table("crm_actuacion_tipo")
-            .select("crm_actuacion_tipoid, tipo")
-            .eq("habilitado", True)
-            .order("tipo")
-            .execute()
-            .data
-            or []
-        )
-        tipos_map = {r["tipo"]: r["crm_actuacion_tipoid"] for r in rows}
+        cats = api_catalogos() or {}
+        rows = cats.get("tipos") or []
+        tipos_map = {r.get("tipo"): r.get("crm_actuacion_tipoid") for r in rows if r.get("crm_actuacion_tipoid") is not None}
         labels = list(tipos_map.keys())
         return tipos_map, labels
     except Exception:
         return {}, []
 
 
-def _load_trabajadores(supabase):
-    if not supabase:
-        return {}, []
+def _load_trabajadores(_supabase_unused):
     try:
-        rows = (
-            supabase.table("trabajador")
-            .select("trabajadorid, nombre, apellidos")
-            .order("nombre")
-            .execute()
-            .data
-            or []
-        )
-        labels = []
-        mapping = {}
-        for r in rows:
-            nombre = (r.get("nombre") or "").strip()
-            apellidos = (r.get("apellidos") or "").strip()
-            label = f"{nombre} {apellidos}".strip() or f"Trabajador {r.get('trabajadorid')}"
-            labels.append(label)
-            mapping[label] = r.get("trabajadorid")
-        return mapping, labels
+        import requests
+
+        r = requests.get(f"{get_api_base()}/api/catalogos/trabajadores", timeout=15)
+        r.raise_for_status()
+        rows = r.json() or []
     except Exception:
         return {}, []
+    labels = []
+    mapping = {}
+    for r in rows:
+        nombre = (r.get("nombre") or "").strip()
+        apellidos = (r.get("apellidos") or "").strip()
+        label = f"{nombre} {apellidos}".strip() or f"Trabajador {r.get('trabajadorid')}"
+        labels.append(label)
+        mapping[label] = r.get("trabajadorid")
+    return mapping, labels
 
 
 def render_actuacion_form(supabase, act=None, fecha_default=None):
@@ -220,18 +203,10 @@ def render_actuacion_form(supabase, act=None, fecha_default=None):
                 ).isoformat()
 
             try:
-                if supabase:
-                    if is_edit:
-                        supabase.table("crm_actuacion").update(data).eq(
-                            "crm_actuacionid", act["crm_actuacionid"]
-                        ).execute()
-                    else:
-                        supabase.table("crm_actuacion").insert(data).execute()
+                if is_edit:
+                    api_actualizar(act["crm_actuacionid"], data)
                 else:
-                    if is_edit:
-                        api_actualizar(act["crm_actuacionid"], data)
-                    else:
-                        api_crear(data)
+                    api_crear(data)
 
                 st.success("Guardado correctamente.")
                 st.session_state["crm_actuacion_detalle_id"] = None

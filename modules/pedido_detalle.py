@@ -1,20 +1,13 @@
 import streamlit as st
 import pandas as pd
-from modules.pedido_models import load_estados_pedido, load_clientes, load_trabajadores
+from modules.pedido_api import detalle, lineas, totales, observaciones
 from modules.incidencia_lista import render_incidencia_lista
 
 
-def render_pedido_detalle(supabase, pedidoid: int):
-    """Muestra la ficha completa de un pedido con tabs."""
+def render_pedido_detalle(_supabase_unused, pedido_id: int):
+    """Muestra la ficha completa de un pedido (solo API)."""
     try:
-        pedido = (
-            supabase.table("pedido")
-            .select("*")
-            .eq("pedidoid", pedidoid)
-            .single()
-            .execute()
-            .data
-        )
+        pedido = detalle(pedido_id)
         if not pedido:
             st.error("❌ Pedido no encontrado.")
             return
@@ -22,106 +15,65 @@ def render_pedido_detalle(supabase, pedidoid: int):
         st.error(f"Error cargando pedido: {e}")
         return
 
-    st.subheader(f"📋 Pedido #{pedido['numero']} — Detalle completo")
+    st.subheader(f"📋 Pedido #{pedido.get('pedido_id')} — Detalle completo")
 
     tabs = st.tabs(["🧾 Resumen", "📦 Líneas", "💰 Totales y observaciones"])
 
-    clientes = load_clientes(supabase)
-    trabajadores = load_trabajadores(supabase)
-    estados = load_estados_pedido(supabase)
-
-    cliente_nombre = next((k for k, v in clientes.items() if v == pedido.get("clienteid")), "-")
-    trabajador_nombre = next((k for k, v in trabajadores.items() if v == pedido.get("trabajadorid")), "-")
-    estado_nombre = next((k for k, v in estados.items() if v == pedido.get("estado_pedidoid")), "-")
-
     st.markdown("## 🚨 Incidencias relacionadas")
-    render_incidencia_lista(supabase)
-
+    render_incidencia_lista(None)
 
     # -----------------------------------------------------
-    # 🧾 TAB 1 — Resumen
+    # TAB 1 — Resumen
     # -----------------------------------------------------
     with tabs[0]:
         col1, col2 = st.columns([2, 1])
         with col1:
-            st.markdown(f"**Cliente:** {cliente_nombre}")
-            st.markdown(f"**Vendedor:** {trabajador_nombre}")
-            st.markdown(f"**Estado:** {estado_nombre}")
-            st.markdown(f"**Tipo:** {pedido.get('tipo_pedidoid', '-')}")
-            st.markdown(f"**Procedencia:** {pedido.get('procedencia_pedidoid', '-')}")
+            st.markdown(f"**Cliente:** {pedido.get('cliente') or pedido.get('clienteid') or '-'}")
+            st.markdown(f"**Estado:** {pedido.get('pedido_estado_nombre') or pedido.get('pedido_estadoid') or '-'}")
+            st.markdown(f"**Procedencia:** {pedido.get('pedido_procedencia') or '-'}")
         with col2:
             st.markdown(f"**Fecha pedido:** {pedido.get('fecha_pedido')}")
-            st.markdown(f"**Confirmada:** {pedido.get('fecha_confirmada')}")
-            st.markdown(f"**Entrega prevista:** {pedido.get('fecha_entrega_prevista')}")
-            st.markdown(f"**Facturar individual:** {'✅ Sí' if pedido.get('facturar_individual') else '❌ No'}")
+            st.markdown(f"**Fecha completado:** {pedido.get('fecha_completado')}")
         st.divider()
         st.markdown(f"**Referencia cliente:** {pedido.get('referencia_cliente') or '-'}")
-        if pedido.get("justificante_pago_url"):
-            st.markdown(f"[📄 Ver justificante de pago]({pedido['justificante_pago_url']})")
 
     # -----------------------------------------------------
-    # 📦 TAB 2 — Líneas del pedido
+    # TAB 2 — Líneas del pedido
     # -----------------------------------------------------
     with tabs[1]:
         try:
-            res = (
-                supabase.table("pedido_detalle")
-                .select("pedido_detalleid, nombre_producto, cantidad, precio_unitario, descuento_pct, importe_total_linea")
-                .eq("pedidoid", pedidoid)
-                .execute()
-            )
-            lineas = res.data or []
-            if not lineas:
+            lineas_data = lineas(pedido_id) or []
+            if not lineas_data:
                 st.info("📭 No hay líneas registradas para este pedido.")
             else:
-                df = pd.DataFrame(lineas)
-                df["importe_total_linea"] = df["importe_total_linea"].fillna(
-                    df["cantidad"] * df["precio_unitario"]
-                )
-                st.dataframe(df, use_container_width=True)
+                df = pd.DataFrame(lineas_data)
+                st.dataframe(df, use_container_width=True, hide_index=True)
         except Exception as e:
             st.error(f"Error cargando líneas: {e}")
 
     # -----------------------------------------------------
-    # 💰 TAB 3 — Totales y observaciones
+    # TAB 3 — Totales y observaciones
     # -----------------------------------------------------
     with tabs[2]:
         col1, col2 = st.columns([1, 1])
         with col1:
+            tot = None
             try:
-                tot = (
-                    supabase.table("pedido_totales")
-                    .select("*")
-                    .eq("pedidoid", pedidoid)
-                    .single()
-                    .execute()
-                    .data
-                )
-                if not tot:
-                    st.warning("⚠️ No hay totales calculados para este pedido.")
-                else:
-                    st.metric("Base imponible", f"{tot['base_imponible']:.2f} €")
-                    st.metric("IVA", f"{tot['iva_importe']:.2f} €")
-                    st.metric("Total", f"{tot['total_importe']:.2f} €")
-                    st.metric("Gastos de envío", f"{tot['gastos_envio']:.2f} €")
-            except Exception as e:
-                st.error(f"Error cargando totales: {e}")
+                tot = totales(pedido_id)
+            except Exception:
+                tot = None
+            st.metric("Base imponible", f"{float((tot or {}).get('total_base_imponible') or 0):.2f} €")
+            st.metric("Impuestos", f"{float((tot or {}).get('total_impuestos') or 0):.2f} €")
+            st.metric("Recargos", f"{float((tot or {}).get('total_recargos') or 0):.2f} €")
+            st.metric("Gastos envío", f"{float((tot or {}).get('total_base_gastos_envios') or 0):.2f} €")
+            st.metric("Total", f"{float((tot or {}).get('total') or 0):.2f} €")
         with col2:
             try:
-                obs = (
-                    supabase.table("pedido_observacion")
-                    .select("comentario, tipo, fecha, usuario")
-                    .eq("pedidoid", pedidoid)
-                    .order("fecha", desc=True)
-                    .execute()
-                    .data
-                )
-                if not obs:
-                    st.info("🗒️ No hay observaciones registradas.")
-                else:
-                    for o in obs:
-                        st.markdown(
-                            f"**{o['tipo']}** — {o['fecha']} · {o.get('usuario','-')}\n\n> {o['comentario']}"
-                        )
-            except Exception as e:
-                st.error(f"Error cargando observaciones: {e}")
+                obs = observaciones(pedido_id) or []
+            except Exception:
+                obs = []
+            if not obs:
+                st.info("🗒️ No hay observaciones registradas.")
+            else:
+                for o in obs:
+                    st.markdown(f"**{o.get('tipo','pedido')}** · {o.get('fecha','-')} · {o.get('usuario','-')}\n\n> {o.get('comentario','')}")

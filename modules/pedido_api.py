@@ -75,3 +75,13 @@ def observaciones(pedidoid: int) -> list:
 def crear_observacion(pedidoid: int, payload: dict) -> dict:
     r = requests.post(f"{get_api_base()}/api/pedidos/{pedidoid}/observaciones", json=payload, timeout=15)
     return _handle(r)
+
+
+def incidencias(pedidoid: int) -> list:
+    r = requests.get(f"{get_api_base()}/api/pedidos/{pedidoid}/incidencias", timeout=15)
+    return _handle(r)
+
+
+def crear_incidencia(pedidoid: int, payload: dict) -> dict:
+    r = requests.post(f"{get_api_base()}/api/pedidos/{pedidoid}/incidencias", json=payload, timeout=15)
+    return _handle(r)

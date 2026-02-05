@@ -1,68 +1,67 @@
 import streamlit as st
 from datetime import datetime, timedelta
+import requests
+
+from modules.api_base import get_api_base
+from modules.crm_api import (
+    detalle as api_detalle,
+    actualizar as api_actualizar,
+    crear as api_crear,
+    catalogos as api_catalogos,
+)
 
 
 # ======================================================
 # WORKFLOW DE LLAMADA (CRM)
 # ======================================================
 
-def _crm_estado_id(supabase, estado: str):
+def _crm_estado_id(_supabase_unused, estado: str):
     try:
-        row = (
-            supabase.table("crm_actuacion_estado")
-            .select("crm_actuacion_estadoid, estado")
-            .eq("estado", estado)
-            .single()
-            .execute()
-            .data
-        )
-        return row.get("crm_actuacion_estadoid") if row else None
+        cats = api_catalogos() or {}
+        rows = cats.get("estados") or []
+        for r in rows:
+            if r.get("estado") == estado:
+                return r.get("crm_actuacion_estadoid")
     except Exception:
-        return None
+        pass
+    return None
+
+
+def _trabajadores_map() -> dict:
+    cache_key = "crm_trabajadores_cache"
+    if cache_key in st.session_state:
+        return st.session_state[cache_key]
+    try:
+        r = requests.get(f"{get_api_base()}/api/catalogos/trabajadores", timeout=15)
+        r.raise_for_status()
+        rows = r.json() or []
+    except Exception:
+        rows = []
+    mapping = {}
+    for t in rows:
+        nombre = (t.get("nombre") or "").strip()
+        apellidos = (t.get("apellidos") or "").strip()
+        label = f"{nombre} {apellidos}".strip() or f"Trabajador {t.get('trabajadorid')}"
+        mapping[t.get("trabajadorid")] = label
+    st.session_state[cache_key] = mapping
+    return mapping
 
 
 def render_llamada_workflow(supabase, crm_actuacionid: int):
-    res = (
-        supabase.table("crm_actuacion")
-        .select(
-            """
-            crm_actuacionid,
-            clienteid,
-            trabajador_creadorid,
-            crm_actuacion_estadoid,
-            fecha_accion,
-            fecha_vencimiento,
-            hora_inicio,
-            hora_fin,
-            duracion_segundos,
-            resultado,
-            titulo,
-            descripcion,
-            requiere_seguimiento,
-            fecha_recordatorio,
-            cliente (clienteid, razonsocial, nombre),
-            trabajador!crm_actuacion_trabajador_creadorid_fkey (trabajadorid, nombre, apellidos),
-            crm_actuacion_estado (estado)
-        """
-        )
-        .eq("crm_actuacionid", crm_actuacionid)
-        .single()
-        .execute()
-        .data
-    )
+    try:
+        act = api_detalle(crm_actuacionid) or {}
+    except Exception as e:
+        st.error(f"Error cargando actuacion: {e}")
+        return
 
-    if not res:
+    if not act:
         st.error("No se encontro la actuacion.")
         return
 
-    act = res
-    cliente_nombre = act.get("cliente", {}).get("razonsocial") or act.get("cliente", {}).get("nombre") or "-"
-    trabajador_nombre = (
-        f"{act['trabajador']['nombre']} {act['trabajador']['apellidos']}"
-        if act.get("trabajador")
-        else "-"
-    )
-    estado = (act.get("crm_actuacion_estado") or {}).get("estado") or "-"
+    cliente_nombre = act.get("cliente_nombre") or (f"Cliente {act.get('clienteid')}" if act.get("clienteid") else "-")
+    trabajador_map = _trabajadores_map()
+    trabajador_nombre = trabajador_map.get(act.get("trabajador_creadorid")) or "-"
+    estado = act.get("estado") or "-"
 
     st.markdown(
         f"### Llamada - <b>{cliente_nombre}</b>",
@@ -99,14 +98,10 @@ def render_llamada_workflow(supabase, crm_actuacionid: int):
         if st.button("Iniciar llamada", use_container_width=True):
             ahora = datetime.utcnow().isoformat()
 
-            supabase.table("crm_actuacion") \
-                .update({"hora_inicio": ahora}) \
-                .eq("crm_actuacionid", crm_actuacionid) \
-                .execute()
-
+            api_actualizar(crm_actuacionid, {"hora_inicio": ahora})
             _registrar_historial(
                 supabase,
-                act["clienteid"],
+                act.get("clienteid"),
                 f"Inicio de llamada (Actuacion #{crm_actuacionid})."
             )
 
@@ -160,9 +155,7 @@ def render_llamada_workflow(supabase, crm_actuacionid: int):
             if estado_id:
                 payload["crm_actuacion_estadoid"] = estado_id
 
-            supabase.table("crm_actuacion").update(payload).eq(
-                "crm_actuacionid", crm_actuacionid
-            ).execute()
+            api_actualizar(crm_actuacionid, payload)
 
             if crear_seguimiento:
                 fecha_seg = (ahora + timedelta(days=int(dias_seg))).replace(
@@ -178,24 +171,23 @@ def render_llamada_workflow(supabase, crm_actuacionid: int):
                     "titulo": "Seguimiento de llamada",
                     "resultado": None,
                     "requiere_seguimiento": True,
-                    "fecha_recordatorio": fecha_seg.date().isoformat(),
+                    "fecha_recordatorio": fecha_seg.isoformat(),
                 }
 
                 estado_id_p = _crm_estado_id(supabase, "Pendiente")
                 if estado_id_p:
                     payload_seg["crm_actuacion_estadoid"] = estado_id_p
 
-                supabase.table("crm_actuacion").insert(payload_seg).execute()
-
+                api_crear(payload_seg)
                 _registrar_historial(
                     supabase,
-                    act["clienteid"],
+                    act.get("clienteid"),
                     f"Programado seguimiento automatico para el {fecha_seg.date()}."
                 )
 
             _registrar_historial(
                 supabase,
-                act["clienteid"],
+                act.get("clienteid"),
                 f"Llamada finalizada. Resultado: {resultado_principal}."
             )
 
@@ -216,12 +208,5 @@ def render_llamada_workflow(supabase, crm_actuacionid: int):
 # REGISTRO DE HISTORIAL CRM (mensajes / actividad)
 # ======================================================
 
-def _registrar_historial(supa, clienteid: int, mensaje: str):
-    try:
-        supa.table("mensaje_contacto").insert({
-            "clienteid": clienteid,
-            "mensaje": mensaje,
-            "fecha": datetime.utcnow().isoformat()
-        }).execute()
-    except Exception:
-        pass
+def _registrar_historial(_supa_unused, _clienteid: int, _mensaje: str):
+    return None

@@ -16,7 +16,11 @@ from modules.dashboard.actuacion_card import render_actuacion_card
 from modules.dashboard.actuacion_form import render_actuacion_form
 from modules.dashboard.campaign_strip import render_campaign_strip
 from modules.dashboard.incidencias_block import render_incidencias_blocks
-from modules.crm_api import listar as api_listar, actualizar as api_actualizar
+from modules.crm_api import (
+    listar as api_listar,
+    actualizar as api_actualizar,
+    catalogos as api_crm_catalogos,
+)
 from modules.pipeline_albaranes import can_run_today, run_pipeline, tail_log
 
 
@@ -35,19 +39,16 @@ def _table_exists(supabase, table: str) -> bool:
         return False
 
 
-def _get_crm_estado_id(supabase, estado: str):
+def _get_crm_estado_id(_supabase_unused, estado: str):
     try:
-        row = (
-            supabase.table("crm_actuacion_estado")
-            .select("crm_actuacion_estadoid, estado")
-            .eq("estado", estado)
-            .single()
-            .execute()
-            .data
-        )
-        return row.get("crm_actuacion_estadoid") if row else None
+        cats = api_crm_catalogos() or {}
+        rows = cats.get("estados") or []
+        for r in rows:
+            if r.get("estado") == estado:
+                return r.get("crm_actuacion_estadoid")
     except Exception:
         return None
+    return None
 
 
 def _get_incidencia_estado_id(supabase, estado: str):
@@ -96,6 +97,22 @@ def _count_api_crm_pendientes(trabajadorid: int | None):
         return len(r.json().get("data", []))
     except Exception:
         return "-"
+
+
+def _load_pedidos_api(fecha_desde: date, page_size: int = 500) -> list:
+    """
+    Carga pedidos vía API (evitamos acceso directo a Supabase desde el frontend).
+    """
+    try:
+        r_ped = requests.get(
+            f"{_api_base()}/api/pedidos",
+            params={"fecha_desde": fecha_desde.isoformat(), "page": 1, "page_size": page_size},
+            timeout=20,
+        )
+        r_ped.raise_for_status()
+        return r_ped.json().get("data", [])
+    except Exception:
+        return []
 
 
 def _load_activity_api(fecha_inicio_30: date):
@@ -273,21 +290,10 @@ def render_dashboard(supabase):
             pres_count = contar_registros(supabase, "presupuesto")
         _kpi_card("Presupuestos", pres_count)
     with c2:
-        if supabase is None or not _table_exists(supabase, "pedido"):
-            ped_activos = _count_api_pedidos_activos()
-        else:
-            ped_activos = contar_registros(supabase, "pedido", {"estado_pedidoid": 2})
+        ped_activos = _count_api_pedidos_activos()
         _kpi_card("Pedidos activos", ped_activos, color=SUCCESS)
     with c3:
-        if supabase is None or not _table_exists(supabase, "crm_actuacion"):
-            crm_pend = _count_api_crm_pendientes(trabajadorid)
-        else:
-            est_id = _get_crm_estado_id(supabase, "Pendiente")
-            crm_pend = (
-                contar_registros(supabase, "crm_actuacion", {"crm_actuacion_estadoid": est_id})
-                if est_id
-                else "-"
-            )
+        crm_pend = _count_api_crm_pendientes(trabajadorid)
         _kpi_card("Acciones CRM pendientes", crm_pend, color=WARNING)
     with c4:
         if supabase and _table_exists(supabase, "incidencia"):
@@ -362,32 +368,16 @@ def render_dashboard(supabase):
     # ------------------------------------------------------
     acts = []
     try:
-        if supabase:
-            q = (
-                supabase.table("crm_actuacion")
-                .select(
-                    "crm_actuacionid, descripcion, fecha_vencimiento, fecha_accion, "
-                    "clienteid, trabajador_creadorid, trabajador_asignadoid, titulo, "
-                    "hora_inicio, hora_fin, duracion_segundos, "
-                    "crm_actuacion_estado(estado)"
-                )
-                .gte("fecha_vencimiento", semana_ini.isoformat())
-                .lte("fecha_vencimiento", semana_fin.isoformat())
-                .order("fecha_vencimiento")
-            )
-            acts_data = q.execute().data or []
-        else:
-            payload = {
-                "trabajador_asignadoid": trabajadorid,
-                "estado": None,
-                "buscar": None,
-            }
-            acts_data = api_listar(payload).get("data", [])
-            acts_data = [
-                a
-                for a in acts_data
-                if semana_ini.isoformat() <= (a.get("fecha_vencimiento") or "")[:10] <= semana_fin.isoformat()
-            ]
+        payload = {
+            "trabajador_asignadoid": trabajadorid if not ver_todo else None,
+            "buscar": None,
+        }
+        acts_data = api_listar(payload).get("data", [])
+        acts_data = [
+            a
+            for a in acts_data
+            if semana_ini.isoformat() <= (a.get("fecha_vencimiento") or "")[:10] <= semana_fin.isoformat()
+        ]
 
         if not ver_todo and trabajadorid:
             def visible(a):
@@ -406,25 +396,6 @@ def render_dashboard(supabase):
     # Cargar nombres de clientes
     # ------------------------------------------------------
     clientes_map = {}
-    try:
-        if supabase:
-            ids = {a["clienteid"] for a in acts if a.get("clienteid")}
-            if ids:
-                rows = (
-                    supabase.table("cliente")
-                    .select("clienteid, razonsocial, nombre")
-                    .in_("clienteid", list(ids))
-                    .execute()
-                    .data
-                )
-                clientes_map = {
-                    r["clienteid"]: (r.get("razonsocial") or r.get("nombre") or "-")
-                    for r in rows
-                }
-        else:
-            clientes_map = {}
-    except Exception:
-        clientes_map = {}
 
     # ------------------------------------------------------
     # Diseño: calendario + panel lateral
@@ -440,7 +411,7 @@ def render_dashboard(supabase):
             total = len(acts)
             por_estado = {}
             for a in acts:
-                est = (a.get("crm_actuacion_estado") or {}).get("estado") or "-"
+                est = a.get("estado") or "-"
                 por_estado[est] = por_estado.get(est, 0) + 1
 
             st.write(f"**Total:** {total}")
@@ -461,7 +432,7 @@ def render_dashboard(supabase):
                     st.caption("Sin acciones.")
 
                 for a in daily:
-                    cliente = clientes_map.get(a.get("clienteid"), "Sin cliente")
+                    cliente = clientes_map.get(a.get("clienteid"), f"Cliente {a.get('clienteid') or '-'}")
                     clicked_view, clicked_complete = render_actuacion_card(a, cliente)
 
                     if clicked_view:
@@ -471,19 +442,11 @@ def render_dashboard(supabase):
 
                     if clicked_complete:
                         try:
-                            if supabase:
-                                estado_id = _get_crm_estado_id(supabase, "Completada")
-                                payload = {"fecha_accion": date.today().isoformat()}
-                                if estado_id:
-                                    payload["crm_actuacion_estadoid"] = estado_id
-                                supabase.table("crm_actuacion").update(payload).eq(
-                                    "crm_actuacionid", a["crm_actuacionid"]
-                                ).execute()
-                            else:
-                                api_actualizar(
-                                    a["crm_actuacionid"],
-                                    {"estado": "Completada", "fecha_accion": date.today().isoformat()},
-                                )
+                            estado_id = _get_crm_estado_id(None, "Completada")
+                            payload = {"fecha_accion": date.today().isoformat()}
+                            if estado_id:
+                                payload["crm_actuacion_estadoid"] = estado_id
+                            api_actualizar(a["crm_actuacionid"], payload)
                             st.success("Actuación completada.")
                             st.rerun()
                         except Exception as e:
@@ -526,15 +489,8 @@ def render_dashboard(supabase):
     # -------- Gráficas principales --------
     with colA:
         try:
-            if supabase and _table_exists(supabase, "pedido") and _table_exists(supabase, "presupuesto"):
-                ped = (
-                    supabase.table("pedido")
-                    .select("fecha_pedido")
-                    .gte("fecha_pedido", fecha_inicio_30.isoformat())
-                    .execute()
-                    .data
-                    or []
-                )
+            if supabase and _table_exists(supabase, "presupuesto"):
+                ped = _load_pedidos_api(fecha_inicio_30)
                 pres = (
                     supabase.table("presupuesto")
                     .select("fecha_presupuesto")
@@ -543,15 +499,8 @@ def render_dashboard(supabase):
                     .data
                     or []
                 )
-                act_estado_id = _get_crm_estado_id(supabase, "Completada")
-                act_query = (
-                    supabase.table("crm_actuacion")
-                    .select("fecha_accion, crm_actuacion_estado(estado)")
-                    .gte("fecha_accion", fecha_inicio_30.isoformat())
-                )
-                if act_estado_id:
-                    act_query = act_query.eq("crm_actuacion_estadoid", act_estado_id)
-                acts30 = act_query.execute().data or []
+                acts30 = api_listar({}).get("data", [])
+                acts30 = [a for a in acts30 if (a.get("fecha_accion") or "")[:10] >= fecha_inicio_30.isoformat()]
             else:
                 ped, pres, acts30 = _load_activity_api(fecha_inicio_30)
 
@@ -592,16 +541,7 @@ def render_dashboard(supabase):
         # Gráfico estados CRM
         st.markdown("### 🎯 Estado de acciones CRM (últimos 30 días)")
         try:
-            if supabase and _table_exists(supabase, "crm_actuacion"):
-                rows = (
-                    supabase.table("crm_actuacion")
-                    .select("crm_actuacion_estado(estado)")
-                    .gte("fecha_accion", fecha_inicio_30.isoformat())
-                    .execute()
-                    .data
-                )
-            else:
-                rows = [{"estado": a.get("estado")} for a in acts30 if a.get("estado")]
+            rows = [{"estado": a.get("estado")} for a in acts30 if a.get("estado")]
             df_est = pd.DataFrame(rows)
             if df_est.empty:
                 st.caption("Sin acciones CRM.")
@@ -618,23 +558,22 @@ def render_dashboard(supabase):
         # ---- Presupuestos -> Pedidos ----
         st.markdown("### Presupuestos convertidos en pedidos")
         try:
-            if not (supabase and _table_exists(supabase, "pedido") and _table_exists(supabase, "presupuesto")):
-                st.info("Sin datos de pedidos/presupuestos en este entorno.")
+            ped_conv = _load_pedidos_api(fecha_inicio_30)
+            ped_conv = [p for p in ped_conv if (p.get("pedido_procedencia") or "").lower() == "presupuesto"]
+
+            if not ped_conv:
+                st.caption("Sin conversiones.")
             else:
-                ped_conv = (
-                    supabase.table("pedido")
-                    .select("pedidoid, numero, fecha_pedido, presupuesto_origenid, clienteid")
-                    .gte("fecha_pedido", fecha_inicio_30.isoformat())
-                    .execute()
-                    .data
-                )
+                pres_ids = [
+                    int(str(p.get("referencia_cliente", "")).replace("PRES-", ""))
+                    for p in ped_conv
+                    if str(p.get("referencia_cliente", "")).startswith("PRES-")
+                ]
+                pres_ids = [pid for pid in pres_ids if pid]
 
-                ped_conv = [p for p in ped_conv if p.get("presupuesto_origenid")]
-
-                if not ped_conv:
-                    st.caption("Sin conversiones.")
-                else:
-                    pres_ids = list({p["presupuesto_origenid"] for p in ped_conv})
+                pres_rows = []
+                cli_rows = []
+                if supabase and _table_exists(supabase, "presupuesto"):
                     pres_rows = (
                         supabase.table("presupuesto")
                         .select("presupuestoid, numero, clienteid")
@@ -642,8 +581,7 @@ def render_dashboard(supabase):
                         .execute()
                         .data
                     )
-                    pres_map = {r["presupuestoid"]: r["numero"] for r in pres_rows}
-
+                if supabase and _table_exists(supabase, "cliente"):
                     cli_ids = list({p["clienteid"] for p in ped_conv})
                     cli_rows = (
                         supabase.table("cliente")
@@ -652,15 +590,17 @@ def render_dashboard(supabase):
                         .execute()
                         .data
                     )
-                    cli_map = {
-                        c["clienteid"]: (c.get("razonsocial") or c.get("nombre") or "-")
-                        for c in cli_rows
-                    }
 
-                    for p in ped_conv[:5]:
-                        st.markdown(
-                            f"**Pedido {p['numero']}** -> presupuesto {pres_map.get(p['presupuesto_origenid'],'-')} - {cli_map.get(p['clienteid'],'-')}"
-                        )
+                pres_map = {r["presupuestoid"]: r["numero"] for r in pres_rows}
+                cli_map = {
+                    c["clienteid"]: (c.get("razonsocial") or c.get("nombre") or "-")
+                    for c in cli_rows
+                }
+
+                for p in ped_conv[:5]:
+                    st.markdown(
+                        f"**Pedido {p.get('pedido_id')}** -> presupuesto {pres_map.get(int(str(p.get('referencia_cliente','0')).replace('PRES-','') or 0),'-')} - {cli_map.get(p.get('clienteid'),'-')}"
+                    )
 
         except Exception as e:
             st.error(f"Error en conversiones: {e}")

@@ -1,22 +1,25 @@
+import requests
 import streamlit as st
 from datetime import date
+
+from modules.api_base import get_api_base
 
 
 def _safe(v, d="-"):
     return v if v not in (None, "", "null") else d
 
 
-def render_albaran_form(supabase, clienteid: int):
-    st.markdown("### Albaranes del cliente")
-    st.caption("Listado paginado con buscador y filtros basicos.")
+def _api_get(path: str, params: dict | None = None):
+    r = requests.get(f"{get_api_base()}{path}", params=params, timeout=20)
+    r.raise_for_status()
+    return r.json()
 
-    supa = supabase or st.session_state.get("supa")
-    if not supa:
-        st.warning("No hay conexion a base de datos.")
-        return
+
+def render_albaran_form(_supabase_unused, clienteid: int):
+    st.markdown("### Albaranes del cliente")
+    st.caption("Listado paginado con buscador y filtros básicos (vía API).")
 
     st.session_state.setdefault(f"alb_page_size_{clienteid}", 10)
-    st.session_state.setdefault(f"alb_limit_{clienteid}", st.session_state[f"alb_page_size_{clienteid}"])
     st.session_state.setdefault(f"alb_last_q_{clienteid}", "")
 
     c1, c2, c3 = st.columns([3, 1, 1])
@@ -65,62 +68,32 @@ def render_albaran_form(supabase, clienteid: int):
             key=f"alb_sort_{clienteid}",
         )
 
-    if q != st.session_state[f"alb_last_q_{clienteid}"]:
-        st.session_state[f"alb_limit_{clienteid}"] = st.session_state[f"alb_page_size_{clienteid}"]
-        st.session_state[f"alb_last_q_{clienteid}"] = q
-
     page_size = st.selectbox(
-        "Ver por defecto",
+        "Ver por página",
         options=[10, 30, 50],
         index=[10, 30, 50].index(st.session_state[f"alb_page_size_{clienteid}"]),
         key=f"alb_page_size_sel_{clienteid}",
     )
-    if page_size != st.session_state[f"alb_page_size_{clienteid}"]:
-        st.session_state[f"alb_page_size_{clienteid}"] = page_size
-        st.session_state[f"alb_limit_{clienteid}"] = page_size
+    st.session_state[f"alb_page_size_{clienteid}"] = page_size
 
-    limit = st.session_state[f"alb_limit_{clienteid}"]
+    page_key = f"alb_page_{clienteid}"
+    st.session_state.setdefault(page_key, 1)
+    page = st.session_state.get(page_key, 1)
 
     try:
-        query = (
-            supa.table("albaran")
-            .select(
-                "albaran_id, numero, serie, estado, fecha_albaran, total_general, "
-                "empresa_id, empresa(empresa_nombre), forma_pagoid, forma_pago(forma_pago_nombre), "
-                "albaran_estadoid, albaran_estado(estado), tipo_documento, cliente, cif_cliente, "
-                "cuenta_cliente_proveedor"
-            )
-            .eq("clienteid", int(clienteid))
-            .order(ordenar_por, desc=True)
-        )
-
-        if q:
-            q_safe = q.replace(",", " ")
-            if q_safe.isdigit():
-                query = query.or_(
-                    f"numero.eq.{q_safe},serie.ilike.%{q_safe}%,"
-                    f"estado.ilike.%{q_safe}%,forma_de_pago.ilike.%{q_safe}%,"
-                    f"cliente.ilike.%{q_safe}%,cif_cliente.ilike.%{q_safe}%,"
-                    f"cuenta_cliente_proveedor.ilike.%{q_safe}%"
-                )
-            else:
-                query = query.or_(
-                    f"serie.ilike.%{q_safe}%,estado.ilike.%{q_safe}%,"
-                    f"forma_de_pago.ilike.%{q_safe}%,cliente.ilike.%{q_safe}%,"
-                    f"cif_cliente.ilike.%{q_safe}%,cuenta_cliente_proveedor.ilike.%{q_safe}%"
-                )
-
-        if use_desde:
-            query = query.gte("fecha_albaran", str(fecha_desde))
-        if use_hasta:
-            query = query.lte("fecha_albaran", str(fecha_hasta))
-        if filtro_estado:
-            query = query.ilike("estado", f"%{filtro_estado}%")
-        if filtro_tipo:
-            query = query.ilike("tipo_documento", f"%{filtro_tipo}%")
-
-        res = query.range(0, limit - 1).execute()
-        rows = res.data or []
+        params = {
+            "q": q or None,
+            "fecha_desde": str(fecha_desde) if use_desde else None,
+            "fecha_hasta": str(fecha_hasta) if use_hasta else None,
+            "estado": filtro_estado or None,
+            "tipo_documento": filtro_tipo or None,
+            "ordenar_por": ordenar_por,
+            "page": page,
+            "page_size": page_size,
+        }
+        payload = _api_get(f"/api/clientes/{clienteid}/albaranes", params=params)
+        rows = payload.get("data", [])
+        total = payload.get("total", 0)
     except Exception as e:
         st.error(f"Error cargando albaranes: {e}")
         return
@@ -129,13 +102,15 @@ def render_albaran_form(supabase, clienteid: int):
         st.info("No hay albaranes para este cliente.")
         return
 
+    total_pages = max(1, int((total + page_size - 1) / page_size)) if total else 1
+
     total_alb = len(rows)
     total_imp = sum([r.get("total_general") or 0 for r in rows if isinstance(r.get("total_general"), (int, float))])
     m1, m2, m3 = st.columns(3)
     m1.metric("Albaranes", total_alb)
     m2.metric("Importe total (visible)", f"{total_imp:,.2f}")
     if rows:
-        m3.metric("Ultima fecha", str(rows[0].get("fecha_albaran") or "-")[:10])
+        m3.metric("Última fecha", str(rows[0].get("fecha_albaran") or "-")[:10])
 
     col_options = [
         "albaran_id",
@@ -189,7 +164,7 @@ def render_albaran_form(supabase, clienteid: int):
         st.dataframe(df[cols_sel], use_container_width=True, hide_index=True)
 
     st.markdown("---")
-    st.subheader("Lineas de albaran")
+    st.subheader("Líneas de albarán")
     line_cols = [
         "linea_id",
         "albaran_id",
@@ -213,15 +188,15 @@ def render_albaran_form(supabase, clienteid: int):
         ["descripcion", "cantidad", "precio", "subtotal"],
     )
     line_cols_sel = st.multiselect(
-        "Columnas lineas",
+        "Columnas líneas",
         options=line_cols,
         default=st.session_state[f"alb_line_cols_{clienteid}"],
         key=f"alb_line_cols_sel_{clienteid}",
     )
     st.session_state[f"alb_line_cols_{clienteid}"] = line_cols_sel
     line_q = st.text_input(
-        "Buscar en lineas",
-        placeholder="Descripcion o referencia de producto...",
+        "Buscar en líneas",
+        placeholder="Descripción o referencia de producto...",
         key=f"alb_line_q_{clienteid}",
     )
 
@@ -230,47 +205,16 @@ def render_albaran_form(supabase, clienteid: int):
         numero = _safe(r.get("numero"))
         serie = _safe(r.get("serie"))
         fecha = _safe(r.get("fecha_albaran"))
-        with st.expander(f"Albaran {numero} {serie} | {fecha}"):
+        with st.expander(f"Albarán {numero} {serie} | {fecha}"):
             try:
-                lineas = (
-                    supa.table("albaran_linea")
-                    .select(
-                        "linea_id, albaran_id, descripcion, cantidad, precio, descuento_pct, "
-                        "precio_tras_dto, subtotal, tasa_impuesto, cuota_impuesto, tasa_recargo, "
-                        "cuota_recargo, producto_id_origen, producto_ref_origen, idproducto, producto_id"
-                    )
-                    .eq("albaran_id", alb_id)
-                    .order("linea_id")
-                    .execute()
-                    .data
-                    or []
-                )
+                lineas = _api_get(f"/api/albaranes/{alb_id}/lineas", params={"q": line_q or None})
             except Exception as e:
-                st.error(f"Error cargando lineas del albaran {alb_id}: {e}")
+                st.error(f"Error cargando líneas del albarán {alb_id}: {e}")
                 continue
 
             if not lineas:
-                st.info("Sin lineas.")
+                st.info("Sin líneas.")
                 continue
-            if line_q:
-                q_low = line_q.lower()
-
-                def _match(linea):
-                    for k in [
-                        "descripcion",
-                        "producto_ref_origen",
-                        "producto_id_origen",
-                        "idproducto",
-                        "producto_id",
-                    ]:
-                        if q_low in str(linea.get(k, "")).lower():
-                            return True
-                    return False
-
-                lineas = [l for l in lineas if _match(l)]
-                if not lineas:
-                    st.info("Sin lineas que coincidan con el filtro.")
-                    continue
 
             if line_cols_sel:
                 import pandas as pd
@@ -278,9 +222,15 @@ def render_albaran_form(supabase, clienteid: int):
                 df_lines = pd.DataFrame(lineas)
                 st.dataframe(df_lines[line_cols_sel], use_container_width=True, hide_index=True)
 
-    if len(rows) >= limit:
-        if st.button("Ver mas", key=f"alb_more_{clienteid}"):
-            st.session_state[f"alb_limit_{clienteid}"] = (
-                limit + st.session_state[f"alb_page_size_{clienteid}"]
-            )
+    st.markdown("---")
+    p1, p2, p3 = st.columns(3)
+    with p1:
+        if st.button("Anterior", disabled=page <= 1, key=f"alb_prev_{clienteid}"):
+            st.session_state[page_key] = page - 1
+            st.rerun()
+    with p2:
+        st.write(f"Página {page} / {total_pages} · Total: {total}")
+    with p3:
+        if st.button("Siguiente", disabled=page >= total_pages, key=f"alb_next_{clienteid}"):
+            st.session_state[page_key] = page + 1
             st.rerun()

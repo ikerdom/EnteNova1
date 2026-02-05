@@ -35,64 +35,24 @@ def api_post(path: str, payload: dict):
 
 
 # =========================================================
-# CRM helpers (prefer Supabase)
+# CRM helpers (API)
 # =========================================================
 
 def _get_trabajadores(supa):
-    if supa:
-        try:
-            return (
-                supa.table("trabajador")
-                .select("trabajadorid,nombre,apellidos")
-                .order("nombre")
-                .execute()
-                .data
-                or []
-            )
-        except Exception:
-            pass
     return api_get("/api/catalogos/trabajadores") or []
 
 
 def _get_estados(supa):
-    if supa:
-        try:
-            rows = supa.table("crm_actuacion_estado").select("crm_actuacion_estadoid, estado").execute().data or []
-            return {r["estado"]: r["crm_actuacion_estadoid"] for r in rows}
-        except Exception:
-            return {}
-    return {}
+    cats = api_get("/api/crm/catalogos") or {}
+    rows = cats.get("estados") or []
+    return {r.get("estado"): r.get("crm_actuacion_estadoid") for r in rows if r.get("crm_actuacion_estadoid") is not None}
 
 
 def _listar_acciones(supa, clienteid: int) -> List[Dict[str, Any]]:
-    if supa:
-        try:
-            return (
-                supa.table("crm_actuacion")
-                .select(
-                    "crm_actuacionid,clienteid,trabajador_asignadoid,crm_actuacion_estadoid,"
-                    "titulo,descripcion,fecha_vencimiento"
-                )
-                .eq("clienteid", clienteid)
-                .order("fecha_accion", desc=True)
-                .execute()
-                .data
-                or []
-            )
-        except Exception:
-            return []
     return api_get(f"/api/clientes/{clienteid}/crm") or []
 
 
 def _crear_accion(supa, clienteid: int, payload: dict) -> bool:
-    if supa:
-        try:
-            payload = dict(payload)
-            payload["clienteid"] = clienteid
-            supa.table("crm_actuacion").insert(payload).execute()
-            return True
-        except Exception:
-            return False
     return bool(api_post(f"/api/clientes/{clienteid}/crm", payload))
 
 
@@ -111,9 +71,7 @@ def render_crm_form(clienteid: int):
         st.warning("No hay sesion de trabajador activa.")
         return
 
-    supa = st.session_state.get("supa")
-
-    trabajadores = _get_trabajadores(supa)
+    trabajadores = _get_trabajadores(None)
     trabajadores_map = {
         f"{t.get('nombre', '')} {t.get('apellidos', '')}".strip(): t.get("trabajadorid")
         for t in (trabajadores or [])
@@ -121,7 +79,7 @@ def render_crm_form(clienteid: int):
     }
     trabajadores_rev = {v: k for k, v in trabajadores_map.items()}
 
-    estado_map = _get_estados(supa)
+    estado_map = _get_estados(None)
     estado_rev = {v: k for k, v in estado_map.items()}
 
     with st.expander("Registrar nueva accion"):
@@ -173,7 +131,7 @@ def render_crm_form(clienteid: int):
             if hora:
                 payload["fecha_accion"] = datetime.combine(fecha_venc, hora).replace(microsecond=0).isoformat()
 
-            ok = _crear_accion(supa, clienteid, payload)
+            ok = _crear_accion(None, clienteid, payload)
             if ok:
                 st.toast(f"Accion creada y asignada a {trab_sel}.")
                 st.rerun()
@@ -183,7 +141,7 @@ def render_crm_form(clienteid: int):
     st.markdown("---")
     st.markdown("#### Acciones registradas")
 
-    acciones: List[Dict[str, Any]] = _listar_acciones(supa, clienteid)
+    acciones: List[Dict[str, Any]] = _listar_acciones(None, clienteid)
     if not acciones:
         st.info("Este cliente no tiene acciones registradas.")
         return

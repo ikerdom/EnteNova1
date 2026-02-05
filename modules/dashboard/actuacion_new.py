@@ -4,24 +4,19 @@ import streamlit as st
 from datetime import datetime
 
 from modules.dashboard.utils import cliente_autocomplete
-from modules.crm_api import crear as api_crear
+from modules.crm_api import crear as api_crear, catalogos as api_catalogos
 
 
-def _crm_estado_id(supabase, estado: str):
-    if not supabase:
-        return None
+def _crm_estado_id(_supabase_unused, estado: str):
     try:
-        row = (
-            supabase.table("crm_actuacion_estado")
-            .select("crm_actuacion_estadoid, estado")
-            .eq("estado", estado)
-            .single()
-            .execute()
-            .data
-        )
-        return row.get("crm_actuacion_estadoid") if row else None
+        cats = api_catalogos() or {}
+        rows = cats.get("estados") or []
+        for r in rows:
+            if r.get("estado") == estado:
+                return r.get("crm_actuacion_estadoid")
     except Exception:
-        return None
+        pass
+    return None
 
 
 # Formulario nueva actuacion (dia concreto)
@@ -55,12 +50,8 @@ def render_nueva_actuacion_form(supabase, fecha, day_index):
                 }
                 if estado_id:
                     payload["crm_actuacion_estadoid"] = estado_id
-
-                if supabase:
-                    supabase.table("crm_actuacion").insert(payload).execute()
-                else:
-                    payload["fecha_accion"] = f"{fecha.date().isoformat()}T00:00:00"
-                    api_crear({k: v for k, v in payload.items() if k != "descripcion"})
+                payload["fecha_accion"] = f"{fecha.date().isoformat()}T00:00:00"
+                api_crear({k: v for k, v in payload.items() if k != "descripcion"})
 
                 st.success("Accion creada correctamente.")
                 st.session_state["crm_open_day"] = day_index

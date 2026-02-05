@@ -2,6 +2,8 @@
 
 import streamlit as st
 from datetime import datetime, date
+import requests
+from modules.api_base import get_api_base
 
 
 # ==========================================================
@@ -12,7 +14,7 @@ def safe_date(d):
         return "-"
     try:
         return date.fromisoformat(str(d)[:10]).strftime("%d/%m/%Y")
-    except:
+    except Exception:
         return str(d)
 
 
@@ -21,12 +23,12 @@ def safe_time(t):
         return ""
     try:
         return datetime.fromisoformat(str(t)).strftime("%H:%M")
-    except:
+    except Exception:
         return ""
 
 
 # ==========================================================
-# 🔎 Autocomplete cliente
+# 🔍 Autocomplete cliente (API)
 # ==========================================================
 def cliente_autocomplete(
     supabase,
@@ -35,17 +37,15 @@ def cliente_autocomplete(
     clienteid_inicial=None,
 ):
     """
-    Autocomplete con Supabase. Si no hay Supabase, se ofrece un campo numérico sencillo.
+    Autocomplete via API. Si falla, se ofrece un campo numérico sencillo.
     """
-    if supabase is None:
-        val = st.number_input(
-            "ID cliente (opcional)",
-            min_value=0,
-            step=1,
-            value=clienteid_inicial or 0,
-            key=f"{key_prefix}_cli_id",
-        )
-        return val or None
+    st.number_input(
+        "ID cliente (opcional)",
+        min_value=0,
+        step=1,
+        value=clienteid_inicial or 0,
+        key=f"{key_prefix}_cli_id",
+    )
 
     col1, col2 = st.columns([2, 2])
 
@@ -60,18 +60,16 @@ def cliente_autocomplete(
 
     if search and len(search.strip()) >= 2:
         txt = search.strip()
-        rows = (
-            supabase.table("cliente")
-            .select("clienteid, razonsocial, nombre, cifdni")
-            .or_(
-                f"razonsocial.ilike.%{txt}%,"
-                f"nombre.ilike.%{txt}%,"
-                f"cifdni.ilike.%{txt}%"
+        try:
+            r = requests.get(
+                f"{get_api_base()}/api/clientes",
+                params={"q": txt, "page": 1, "page_size": 20},
+                timeout=15,
             )
-            .limit(20)
-            .execute()
-            .data or []
-        )
+            r.raise_for_status()
+            rows = (r.json() or {}).get("data", [])
+        except Exception:
+            rows = []
 
         for c in rows:
             nombre = c.get("razonsocial") or c.get("nombre") or f"Cliente {c['clienteid']}"
@@ -79,7 +77,6 @@ def cliente_autocomplete(
             etiqueta = f"{nombre} ({cif})" if cif else nombre
             opciones[etiqueta] = c["clienteid"]
 
-    # Valor por defecto
     default = "(Sin cliente)"
     if clienteid_inicial:
         for k, v in opciones.items():
@@ -92,7 +89,7 @@ def cliente_autocomplete(
 
 
 # ==========================================================
-# 🔢 Contador genérico de registros (solución del error)
+# 🔢 Contador genérico de registros
 # ==========================================================
 def contar_registros(supabase, tabla, filtros=None):
     """
@@ -116,16 +113,21 @@ def cargar_clientes_map(supabase, acts):
     ids = list({a["clienteid"] for a in acts if a.get("clienteid")})
     if not ids:
         return {}
-
     try:
-        res = (
-            supabase.table("cliente")
-            .select("clienteid, razonsocial")
-            .in_("clienteid", ids)
-            .execute()
+        ids_str = ",".join(str(i) for i in ids)
+        r = requests.get(
+            f"{get_api_base()}/api/clientes/lookup",
+            params={"ids": ids_str},
+            timeout=15,
         )
-        return {r["clienteid"]: r["razonsocial"] for r in res.data}
-    except:
+        r.raise_for_status()
+        rows = r.json() or []
+        return {
+            c.get("clienteid"): (c.get("razonsocial") or c.get("nombre") or f"Cliente {c.get('clienteid')}")
+            for c in rows
+            if c.get("clienteid") is not None
+        }
+    except Exception:
         return {}
 
 

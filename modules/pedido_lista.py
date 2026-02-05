@@ -22,12 +22,6 @@ def _safe(val, default="-"):
     return val if val not in (None, "", "null") else default
 
 
-def _range(page: int, page_size: int):
-    start = (page - 1) * page_size
-    end = start + page_size - 1
-    return start, end
-
-
 def _label_from(catalog: dict, id_val) -> str:
     if not id_val:
         return "-"
@@ -61,26 +55,16 @@ def _money(v):
         return "-"
 
 
-def _abrir_edicion(pedidoid: int):
-    st.session_state["pedido_editar_id"] = pedidoid
+def _abrir_edicion(pedido_id: int):
+    st.session_state["pedido_editar_id"] = pedido_id
     st.session_state["pedido_show_form"] = True
     st.session_state["show_pedido_modal"] = False
     st.rerun()
 
 
 def render_pedido_lista(_supabase=None):
-    modo_inci = st.session_state.get("modo_incidencias", False)
-    tipo_filtro = st.session_state.get("pedido_tipo_filtro")
-
-    if modo_inci:
-        st.header("🚨 Gestión de incidencias")
-        st.caption("Listado de pedidos con incidencias registradas (pendientes o solucionadas).")
-    elif tipo_filtro == "Devolución":
-        st.header("↩️ Gestión de devoluciones")
-        st.caption("Pedidos de devolución que impactan en stock y facturación.")
-    else:
-        st.header("📦 Gestión de pedidos")
-        st.caption("Gestiona pedidos: cabecera, líneas, totales y observaciones vía API.")
+    st.header("📦 Gestión de pedidos")
+    st.caption("Gestiona pedidos: cabecera, líneas, totales y observaciones vía API.")
 
     session = st.session_state
     defaults = {
@@ -96,26 +80,21 @@ def render_pedido_lista(_supabase=None):
 
     page_size_cards, page_size_table = 12, 30
 
-    # Catálogos para labels (desde API)
     try:
         cats = catalogos()
         clientes_map = {c["label"]: c["id"] for c in cats.get("clientes", [])}
         clientes_rev = {c["id"]: c["label"] for c in cats.get("clientes", [])}
-        trabajadores_map = {t["label"]: t["id"] for t in cats.get("trabajadores", [])}
-        trabajadores_rev = {t["id"]: t["label"] for t in cats.get("trabajadores", [])}
         estados_map = {e["label"]: e["id"] for e in cats.get("estados", [])}
         estados_rev = {v: k for k, v in estados_map.items()}
-        tipos_map = {t["label"]: t["id"] for t in cats.get("tipos", [])}
-        procedencias_map = {p["label"]: p["id"] for p in cats.get("procedencias", [])}
+        formas_pago_map = {f["label"]: f["id"] for f in cats.get("formas_pago", [])}
+        formas_pago_rev = {f["id"]: f["label"] for f in cats.get("formas_pago", [])}
     except Exception:
         clientes_map = {}
         clientes_rev = {}
-        trabajadores_map = {}
-        trabajadores_rev = {}
         estados_map = {}
         estados_rev = {}
-        tipos_map = {}
-        procedencias_map = {}
+        formas_pago_map = {}
+        formas_pago_rev = {}
 
     if session.get("pedido_show_form"):
         st.markdown("### Editor de pedido (cabecera)")
@@ -125,24 +104,20 @@ def render_pedido_lista(_supabase=None):
             st.error(f"Error abriendo formulario: {e}")
         st.markdown("---")
 
-    colf1, colf2, colf3, colf4, colf5 = st.columns([2, 2, 2, 2, 1])
+    colf1, colf2, colf3, colf4 = st.columns([3, 2, 2, 1])
     with colf1:
-        q = st.text_input("🔍 Buscar (nº pedido / referencia / cliente)", key="pedido_q")
+        q = st.text_input("🔍 Buscar (id / referencia / cliente)", key="pedido_q")
     with colf2:
         estado_sel = st.selectbox("Estado", ["Todos"] + list(estados_map.keys()), key="pedido_estado")
     with colf3:
-        tipo_sel = st.selectbox("Tipo", ["Todos"] + list(tipos_map.keys()), key="pedido_tipo")
+        forma_sel = st.selectbox("Forma de pago", ["Todas"] + list(formas_pago_map.keys()), key="pedido_pago")
     with colf4:
-        proc_sel = st.selectbox("Procedencia", ["Todas"] + list(procedencias_map.keys()), key="pedido_proc")
-    with colf5:
         view = st.radio("Vista", ["Tarjetas", "Tabla"], horizontal=True, key="pedido_view")
 
-    colf6, colf7, colf8 = st.columns([2, 2, 2])
-    with colf6:
-        trabajador_sel = st.selectbox("Trabajador", ["Todos"] + list(trabajadores_map.keys()), key="pedido_trab")
-    with colf7:
+    colf5, colf6 = st.columns([2, 2])
+    with colf5:
         fecha_desde = st.date_input("Desde", value=None, key="pedido_from")
-    with colf8:
+    with colf6:
         fecha_hasta = st.date_input("Hasta", value=None, key="pedido_to")
 
     if st.button("🆕 Nuevo pedido", use_container_width=True):
@@ -159,12 +134,9 @@ def render_pedido_lista(_supabase=None):
         params = {
             "q": q or None,
             "estadoid": estados_map.get(estado_sel) if estado_sel != "Todos" else None,
-            "tipo_pedidoid": tipos_map.get(tipo_sel) if tipo_sel != "Todos" else None,
-            "procedencia_pedidoid": procedencias_map.get(proc_sel) if proc_sel != "Todas" else None,
-            "trabajadorid": trabajadores_map.get(trabajador_sel) if trabajador_sel != "Todos" else None,
+            "forma_pagoid": formas_pago_map.get(forma_sel) if forma_sel != "Todas" else None,
             "fecha_desde": fecha_desde.isoformat() if fecha_desde else None,
             "fecha_hasta": fecha_hasta.isoformat() if fecha_hasta else None,
-            "devoluciones": tipo_filtro == "Devolución",
             "page": session.pedido_page,
             "page_size": per_page,
         }
@@ -208,9 +180,7 @@ def render_pedido_lista(_supabase=None):
             session.get("pedido_modal_id"),
             estados_rev,
             clientes_rev,
-            {},
-            {},
-            {},
+            formas_pago_rev,
         )
 
 
@@ -219,20 +189,20 @@ def _render_table(pedidos: list[dict], estados_rev: dict):
     for p in pedidos:
         rows.append(
             {
-                "ID": p.get("pedidoid"),
-                "Número": p.get("numero"),
-                "ClienteID": p.get("clienteid"),
-                "Estado": estados_rev.get(p.get("estado_pedidoid")) or "-",
+                "ID": p.get("pedido_id"),
+                "Cliente": p.get("cliente") or p.get("clienteid"),
+                "Estado": estados_rev.get(p.get("pedido_estadoid")) or p.get("pedido_estado_nombre") or "-",
                 "Fecha": p.get("fecha_pedido"),
                 "Referencia": p.get("referencia_cliente"),
+                "Total": p.get("total"),
             }
         )
     st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
 
 def _render_pedido_card(p, estados_rev, clientes_rev):
-    cliente_nombre = clientes_rev.get(p.get("clienteid")) or "-"
-    estado_nombre = estados_rev.get(p.get("estado_pedidoid"))
+    cliente_nombre = p.get("cliente") or clientes_rev.get(p.get("clienteid")) or "-"
+    estado_nombre = estados_rev.get(p.get("pedido_estadoid")) or p.get("pedido_estado_nombre")
     color_estado = _color_estado(estado_nombre)
 
     st.markdown(
@@ -240,7 +210,7 @@ def _render_pedido_card(p, estados_rev, clientes_rev):
         <div style="border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-bottom:10px;
                     background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
             <div style="display:flex;justify-content:space-between;align-items:center;">
-                <div><b>#{_safe(p.get('numero'))}</b> · {_safe(cliente_nombre)}</div>
+                <div><b>#{_safe(p.get('pedido_id'))}</b> · {_safe(cliente_nombre)}</div>
                 <span style="background:{color_estado};color:#fff;padding:3px 8px;border-radius:8px;font-size:0.8rem;">
                     {estado_nombre or '-'}
                 </span>
@@ -256,50 +226,45 @@ def _render_pedido_card(p, estados_rev, clientes_rev):
         unsafe_allow_html=True,
     )
 
-    if p.get("presupuesto_origenid"):
-        st.markdown(f"🔗 **Origen:** Presupuesto #{p['presupuesto_origenid']}")
-
     colA, colB, colC = st.columns(3)
     with colA:
-        if st.button("📄 Ficha", key=f"ficha_{p['pedidoid']}", use_container_width=True):
-            st.session_state["pedido_modal_id"] = p["pedidoid"]
+        if st.button("📄 Ficha", key=f"ficha_{p['pedido_id']}", use_container_width=True):
+            st.session_state["pedido_modal_id"] = p["pedido_id"]
             st.session_state["show_pedido_modal"] = True
             st.session_state["pedido_show_form"] = False
             st.rerun()
     with colB:
         st.button(
             "✏️ Editar",
-            key=f"edit_{p['pedidoid']}",
+            key=f"edit_{p['pedido_id']}",
             use_container_width=True,
-            on_click=(lambda pid=p["pedidoid"]: _abrir_edicion(pid)),
+            on_click=(lambda pid=p["pedido_id"]: _abrir_edicion(pid)),
         )
     with colC:
-        # Duplicar se desactiva para simplificar el flujo
         st.empty()
 
 
 def _render_pedido_modal(
-    pedidoid: int,
+    pedido_id: int,
     estados_rev: dict,
     clientes_rev: dict,
-    trabajadores: dict,
-    formas_pago: dict,
-    transportistas: dict,
+    formas_pago_rev: dict,
 ):
-    if not pedidoid:
+    if not pedido_id:
         return
 
     st.markdown("---")
     st.markdown("### 📄 Ficha del pedido")
 
     try:
-        p = detalle(pedidoid)
+        p = detalle(pedido_id)
     except Exception as e:
         st.error(f"❌ Error cargando pedido: {e}")
         return
 
-    estado_lbl = estados_rev.get(p.get("estado_pedidoid")) or "-"
-    cliente_lbl = clientes_rev.get(p.get("clienteid")) or "-"
+    estado_lbl = estados_rev.get(p.get("pedido_estadoid")) or p.get("pedido_estado_nombre") or "-"
+    cliente_lbl = p.get("cliente") or clientes_rev.get(p.get("clienteid")) or "-"
+    forma_lbl = formas_pago_rev.get(p.get("forma_pagoid")) or "-"
     color_estado = _color_estado(estado_lbl)
 
     c1, c2, c3 = st.columns([2, 1, 1])
@@ -311,7 +276,7 @@ def _render_pedido_modal(
     with c2:
         st.button("🗑️ Eliminar pedido", use_container_width=True, disabled=True)
     with c3:
-        st.button("🧾 Crear devolución", use_container_width=True, disabled=True)
+        st.empty()
 
     with st.expander("📋 Detalle general del pedido", expanded=True):
         col1, col2, col3 = st.columns(3)
@@ -323,22 +288,22 @@ def _render_pedido_modal(
             )
         with col2:
             st.text(f"Fecha pedido: {_safe(p.get('fecha_pedido'))}")
-            st.text(f"Confirmada: {_safe(p.get('fecha_confirmada'))}")
+            st.text(f"Forma de pago: {_safe(forma_lbl)}")
         with col3:
-            st.text(f"Entrega prevista: {_safe(p.get('fecha_entrega_prevista'))}")
+            st.text(f"Procedencia: {_safe(p.get('pedido_procedencia'))}")
             st.text(f"Ref. cliente: {_safe(p.get('referencia_cliente'))}")
 
     st.markdown("---")
     st.subheader("✏️ Cabecera del pedido")
     try:
-        render_pedido_form(None, pedidoid=pedidoid, on_saved_rerun=True)
+        render_pedido_form(None, pedidoid=pedido_id, on_saved_rerun=True)
     except Exception as e:
         st.error(f"❌ Error al abrir el formulario de cabecera: {e}")
 
     st.markdown("---")
     st.subheader("📦 Líneas del pedido")
     try:
-        lineas_data = lineas(pedidoid)
+        lineas_data = lineas(pedido_id)
     except Exception as e:
         st.error(f"❌ Error cargando líneas: {e}")
         lineas_data = []
@@ -349,26 +314,25 @@ def _render_pedido_modal(
         df = pd.DataFrame(lineas_data)
         st.dataframe(df, use_container_width=True, hide_index=True)
 
-    # Alta / baja de líneas
     with st.expander("➕ Añadir línea", expanded=False):
-        with st.form(f"form_add_linea_{pedidoid}"):
-            productoid = st.number_input("ID producto (opcional)", min_value=0, value=0, step=1)
+        with st.form(f"form_add_linea_{pedido_id}"):
+            producto_id = st.number_input("ID producto (opcional)", min_value=0, value=0, step=1)
             nombre_prod = st.text_input("Descripción / nombre del producto")
             cantidad = st.number_input("Cantidad", min_value=1.0, value=1.0)
-            precio = st.number_input("Precio base unitario (sin IVA)", min_value=0.0, value=0.0, step=0.01)
+            precio = st.number_input("Precio unitario", min_value=0.0, value=0.0, step=0.01)
             desc_manual = st.number_input("Descuento (%)", min_value=0.0, max_value=100.0, value=0.0, step=0.5)
             add_ok = st.form_submit_button("💾 Añadir línea", use_container_width=True)
 
         if add_ok:
             try:
                 payload = {
-                    "productoid": int(productoid) if productoid else None,
+                    "producto_id": int(producto_id) if producto_id else None,
                     "nombre_producto": nombre_prod.strip() or None,
                     "cantidad": float(cantidad),
-                    "precio_unitario": float(precio),
+                    "precio": float(precio),
                     "descuento_pct": float(desc_manual),
                 }
-                agregar_linea(pedidoid, payload)
+                agregar_linea(pedido_id, payload)
                 st.success("✅ Línea añadida.")
                 st.rerun()
             except Exception as e:
@@ -376,11 +340,11 @@ def _render_pedido_modal(
 
     if lineas_data:
         with st.expander("🗑️ Eliminar línea", expanded=False):
-            opciones = {f"{l.get('pedido_detalleid')} · {l.get('nombre_producto')}": l.get("pedido_detalleid") for l in lineas_data}
+            opciones = {f"{l.get('pedido_linea_id')} · {l.get('nombre_producto')}": l.get("pedido_linea_id") for l in lineas_data}
             sel = st.selectbox("Selecciona línea a eliminar", list(opciones.keys()))
             if st.button("Eliminar línea seleccionada"):
                 try:
-                    borrar_linea(pedidoid, opciones[sel])
+                    borrar_linea(pedido_id, opciones[sel])
                     st.success("🗑️ Línea eliminada.")
                     st.rerun()
                 except Exception as e:
@@ -389,31 +353,31 @@ def _render_pedido_modal(
     st.markdown("---")
     st.subheader("💰 Totales del pedido")
     try:
-        tot = totales(pedidoid)
+        tot = totales(pedido_id)
     except Exception:
         tot = None
 
     colT1, colT2, colT3, colT4, colT5 = st.columns(5)
     if tot:
-        colT1.metric("Base imponible", _money(tot.get("base_imponible")))
-        colT2.metric("IVA", _money(tot.get("iva_importe")))
-        colT3.metric("Total", _money(tot.get("total_importe")))
-        colT4.metric("Gastos envío", _money(tot.get("gastos_envio")))
-        colT5.metric("Env. sin cargo", "Sí" if tot.get("envio_sin_cargo") else "No")
+        colT1.metric("Base imponible", _money(tot.get("total_base_imponible")))
+        colT2.metric("Impuestos", _money(tot.get("total_impuestos")))
+        colT3.metric("Recargos", _money(tot.get("total_recargos")))
+        colT4.metric("Gastos envío", _money(tot.get("total_base_gastos_envios")))
+        colT5.metric("Total", _money(tot.get("total")))
     else:
         st.warning("⚠️ No hay totales calculados aún para este pedido.")
 
     with st.expander("🔄 Recalcular totales", expanded=False):
-        st.caption("Recalcula los importes con tarifas, descuentos e impuestos reales por producto.")
+        st.caption("Recalcula los importes usando las líneas del pedido.")
 
-        use_iva = st.checkbox("Aplicar IVA (según producto o tarifa)", value=True)
-        gastos = st.number_input("Gastos de envío (€)", min_value=0.0, value=float(tot.get("gastos_envio", 0.0)) if tot else 0.0, step=0.01)
-        envio_sin_cargo = st.checkbox("Envío sin cargo", value=bool(tot.get("envio_sin_cargo")) if tot else False)
+        use_iva = st.checkbox("Aplicar IVA (según líneas)", value=True)
+        gastos = st.number_input("Gastos de envío (€)", min_value=0.0, value=0.0, step=0.01)
+        envio_sin_cargo = st.checkbox("Envío sin cargo", value=False)
 
         if st.button("🔄 Recalcular ahora"):
             try:
                 recalc = recalcular_totales(
-                    pedidoid,
+                    pedido_id,
                     use_iva=use_iva,
                     gastos_envio=gastos,
                     envio_sin_cargo=envio_sin_cargo,
@@ -428,23 +392,23 @@ def _render_pedido_modal(
     st.subheader("📝 Observaciones")
 
     try:
-        obs = observaciones(pedidoid)
+        obs = observaciones(pedido_id)
         if not obs:
             st.info("No hay observaciones registradas.")
         else:
             for o in obs:
-                st.markdown(f"**{o['tipo']}** · {o['fecha']} · {o.get('usuario','-')}\n\n> {o['comentario']}")
+                st.markdown(f"**{o.get('tipo','pedido')}** · {_safe(o.get('fecha'))} · {_safe(o.get('usuario'))}\n\n> {_safe(o.get('comentario'))}")
     except Exception as e:
         st.warning(f"⚠️ No se pudieron cargar observaciones: {e}")
 
     with st.expander("➕ Añadir observación", expanded=False):
-        tipo_obs = st.selectbox("Tipo", ["pedido", "factura"])
+        tipo_obs = st.selectbox("Tipo", ["pedido", "logistica"])
         comentario = st.text_area("Comentario")
         user = st.session_state.get("user_nombre") or st.session_state.get("user_email") or "sistema"
         if st.button("💾 Guardar observación"):
             try:
                 crear_observacion(
-                    pedidoid,
+                    pedido_id,
                     {
                         "tipo": tipo_obs,
                         "comentario": comentario.strip(),

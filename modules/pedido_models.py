@@ -45,12 +45,11 @@ def load_estados_pedido(_supabase) -> Dict[str, Any]:
     try:
         res = (
             _supabase.table("pedido_estado")
-            .select("estado_pedidoid, nombre, habilitado")
-            .eq("habilitado", True)
-            .order("nombre")
+            .select("pedido_estadoid, estado")
+            .order("estado")
             .execute()
         )
-        return _as_options(res.data, label="nombre", value="estado_pedidoid")
+        return _as_options(res.data, label="estado", value="pedido_estadoid")
     except Exception as e:
         st.warning(f"⚠️ No se pudieron cargar estados de pedido: {e}")
         return {}
@@ -113,12 +112,11 @@ def load_formas_pago(_supabase) -> Dict[str, Any]:
     try:
         res = (
             _supabase.table("forma_pago")
-            .select("formapagoid, nombre, habilitado")
-            .eq("habilitado", True)
+            .select("forma_pagoid, nombre")
             .order("nombre")
             .execute()
         )
-        return _as_options(res.data, label="nombre", value="formapagoid")
+        return _as_options(res.data, label="nombre", value="forma_pagoid")
     except Exception as e:
         st.warning(f"⚠️ No se pudieron cargar formas de pago: {e}")
         return {}

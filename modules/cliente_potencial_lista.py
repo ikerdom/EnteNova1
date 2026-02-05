@@ -26,7 +26,8 @@ from modules.cliente_contacto import render_contacto_form
 
 from modules.cliente_observacion import render_observaciones_form
 from modules.cliente_crm import render_crm_form
-from modules.historial import render_historial
+from modules.cliente_facturacion_form import render_facturacion_form
+from modules.cliente_documento_form import render_documento_form
 
 
 
@@ -542,6 +543,8 @@ def _render_modal_detalle_potencial(clienteid: int):
                 "Direcciones",
                 "Contactos",
                 "Observaciones",
+                "Facturación",
+                "Documentos",
                 "CRM",
                 "Historial",
             ]
@@ -566,14 +569,13 @@ def _render_modal_detalle_potencial(clienteid: int):
         with tabs[3]:
             render_observaciones_form(clienteid, key_prefix="pot_modal_")
         with tabs[4]:
-            render_crm_form(int(clienteid))
+            render_facturacion_form(None, int(clienteid))
         with tabs[5]:
-            supa = st.session_state.get("supa")
-            if not supa:
-                st.warning("No hay conexion a base de datos.")
-            else:
-                st.session_state["cliente_actual"] = int(clienteid)
-                render_historial(supa)
+            render_documento_form(None, int(clienteid))
+        with tabs[6]:
+            render_crm_form(int(clienteid))
+        with tabs[7]:
+            st.info("Historial disponible en próxima fase (modo API).")
 
         if st.button("Cerrar ficha", key=f"cerrar_pot_{clienteid}", use_container_width=True):
             st.session_state["pot_detalle_id"] = None

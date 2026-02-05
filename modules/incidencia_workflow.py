@@ -11,7 +11,8 @@ from typing import Dict, Any, List, Optional
 # 🔹 Loaders reutilizables
 # ======================================================
 try:
-    from modules.pedido_models import load_trabajadores, load_clientes
+from modules.pedido_models import load_trabajadores, load_clientes
+from modules.pedido_api import detalle as pedido_detalle
 except Exception:
     def load_trabajadores(_supabase) -> Dict[str, int]:
         try:
@@ -218,9 +219,12 @@ def render_incidencia_detalle(supabase):
     origen_info = "-"
     try:
         if origen_tipo == "pedido" and origen_id:
-            p = supabase.table("pedido").select("numero, fecha_pedido").eq("pedidoid", origen_id).execute().data
-            if p:
-                origen_info = f"Pedido #{p[0].get('numero','-')} ({p[0].get('fecha_pedido','-')})"
+            try:
+                p = pedido_detalle(origen_id)
+                ref = p.get("referencia_cliente") or p.get("pedido_id") or origen_id
+                origen_info = f"Pedido #{ref} ({p.get('fecha_pedido','-')})"
+            except Exception:
+                origen_info = f"Pedido #{origen_id}"
         elif origen_tipo == "producto" and origen_id:
             pr = supabase.table("producto").select("nombre").eq("productoid", origen_id).execute().data
             if pr:

@@ -6,21 +6,21 @@ from typing import Dict
 import streamlit as st
 from dateutil.parser import parse as parse_date
 
-from modules.crm_api import detalle as api_detalle, actualizar as api_actualizar
+from modules.crm_api import (
+    detalle as api_detalle,
+    actualizar as api_actualizar,
+    catalogos as api_catalogos,
+)
+from modules.api_base import get_api_base
 
 
-def _load_trabajadores(supabase) -> Dict[str, int]:
-    if not supabase:
-        return {}
+def _load_trabajadores() -> Dict[str, int]:
     try:
-        rows = (
-            supabase.table("trabajador")
-            .select("trabajadorid,nombre,apellidos")
-            .order("nombre")
-            .execute()
-            .data
-            or []
-        )
+        import requests
+
+        r = requests.get(f"{get_api_base()}/api/catalogos/trabajadores", timeout=15)
+        r.raise_for_status()
+        rows = r.json() or []
     except Exception:
         return {}
 
@@ -33,33 +33,15 @@ def _load_trabajadores(supabase) -> Dict[str, int]:
     return out
 
 
-def _load_estados_tipos(supabase) -> tuple[Dict[str, int], Dict[str, int]]:
-    if not supabase:
-        return {}, {}
+def _load_estados_tipos() -> tuple[Dict[str, int], Dict[str, int]]:
     try:
-        estados = (
-            supabase.table("crm_actuacion_estado")
-            .select("crm_actuacion_estadoid, estado")
-            .eq("habilitado", True)
-            .order("estado")
-            .execute()
-            .data
-            or []
-        )
-        tipos = (
-            supabase.table("crm_actuacion_tipo")
-            .select("crm_actuacion_tipoid, tipo")
-            .eq("habilitado", True)
-            .order("tipo")
-            .execute()
-            .data
-            or []
-        )
+        cats = api_catalogos() or {}
     except Exception:
-        return {}, {}
-
-    estados_map = {e["estado"]: e["crm_actuacion_estadoid"] for e in estados}
-    tipos_map = {t["tipo"]: t["crm_actuacion_tipoid"] for t in tipos}
+        cats = {}
+    estados = cats.get("estados") or []
+    tipos = cats.get("tipos") or []
+    estados_map = {e.get("estado"): e.get("crm_actuacion_estadoid") for e in estados if e.get("crm_actuacion_estadoid") is not None}
+    tipos_map = {t.get("tipo"): t.get("crm_actuacion_tipoid") for t in tipos if t.get("crm_actuacion_tipoid") is not None}
     return estados_map, tipos_map
 
 
@@ -67,10 +49,6 @@ def render_crm_accion_detalle(_supabase_unused, accionid: int):
     if not accionid:
         st.warning("No se ha seleccionado ninguna accion.")
         return
-
-    supa = st.session_state.get("supa")
-    if _supabase_unused is not None:
-        supa = _supabase_unused
 
     try:
         accion = api_detalle(accionid)
@@ -82,8 +60,8 @@ def render_crm_accion_detalle(_supabase_unused, accionid: int):
         st.error("No se encontro la accion seleccionada.")
         return
 
-    estados_map, tipos_map = _load_estados_tipos(supa)
-    trabajadores_map = _load_trabajadores(supa)
+    estados_map, tipos_map = _load_estados_tipos()
+    trabajadores_map = _load_trabajadores()
 
     st.markdown(f"### {accion.get('titulo', '(Sin titulo)')}")
     st.caption(f"Estado: {accion.get('estado', '-')}")

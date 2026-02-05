@@ -34,7 +34,10 @@ from modules.cliente_contacto import render_contacto_form
 from modules.cliente_observacion import render_observaciones_form
 from modules.cliente_albaran_form import render_albaran_form
 from modules.cliente_crm import render_crm_form
-from modules.historial import render_historial
+from modules.cliente_facturacion_form import render_facturacion_form
+from modules.cliente_documento_form import render_documento_form
+from modules.pedido_api import listar as pedidos_listar
+from modules.pedido_detalle import render_pedido_detalle
 
 
 
@@ -429,7 +432,10 @@ def _render_ficha_panel(clienteid: int):
                 "Direcciones",
                 "Contactos",
                 "Observaciones",
+                "Facturación",
+                "Documentos",
                 "Albaranes",
+                "Pedidos",
                 "CRM",
                 "Historial",
             ]
@@ -501,17 +507,17 @@ def _render_ficha_panel(clienteid: int):
         with tabs[3]:
             render_observaciones_form(clienteid, key_prefix="panel_")
         with tabs[4]:
-            supa = st.session_state.get("supa")
-            render_albaran_form(supa, int(clienteid))
+            render_facturacion_form(None, int(clienteid))
         with tabs[5]:
-            render_crm_form(int(clienteid))
+            render_documento_form(None, int(clienteid))
         with tabs[6]:
-            supa = st.session_state.get("supa")
-            if not supa:
-                st.warning("No hay conexion a base de datos.")
-            else:
-                st.session_state["cliente_actual"] = int(clienteid)
-                render_historial(supa)
+            render_albaran_form(None, int(clienteid))
+        with tabs[7]:
+            _render_pedidos_tab(int(clienteid))
+        with tabs[8]:
+            render_crm_form(int(clienteid))
+        with tabs[9]:
+            st.info("Historial disponible en próxima fase (modo API).")
 
         if st.button("Cerrar ficha", key=f"cerrar_cli_{clienteid}", use_container_width=True):
             st.session_state["cliente_detalle_id"] = None
@@ -554,4 +560,54 @@ def _render_contact_summary(cp: dict):
             ("Teléfono", cp.get("telefono") or cp.get("movil")),
         ]
     )
+
+
+def _render_pedidos_tab(clienteid: int):
+    st.markdown("### Pedidos del cliente")
+    try:
+        payload = pedidos_listar({"clienteid": clienteid, "page": 1, "page_size": 50})
+        pedidos = payload.get("data") or []
+    except Exception as e:
+        st.error(f"Error cargando pedidos: {e}")
+        return
+
+    if not pedidos:
+        st.info("Este cliente todavía no tiene pedidos.")
+        return
+
+    rows = []
+    for p in pedidos:
+        rows.append(
+            {
+                "pedido_id": p.get("pedido_id"),
+                "fecha_pedido": p.get("fecha_pedido"),
+                "estado": p.get("pedido_estado_nombre") or p.get("pedido_estadoid"),
+                "referencia": p.get("referencia_cliente"),
+                "total": p.get("total"),
+            }
+        )
+    df = pd.DataFrame(rows)
+    st.dataframe(
+        df,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "pedido_id": st.column_config.NumberColumn("Pedido", format="%d"),
+            "fecha_pedido": st.column_config.DatetimeColumn("Fecha"),
+            "estado": st.column_config.TextColumn("Estado"),
+            "referencia": st.column_config.TextColumn("Referencia"),
+            "total": st.column_config.NumberColumn("Total", format="%.2f"),
+        },
+    )
+
+    ids = [p.get("pedido_id") for p in pedidos if p.get("pedido_id")]
+    if not ids:
+        return
+    sel = st.selectbox(
+        "Ver detalle de pedido",
+        options=["-"] + [str(i) for i in ids],
+        index=0,
+    )
+    if sel != "-":
+        render_pedido_detalle(None, int(sel))
 

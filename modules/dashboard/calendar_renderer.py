@@ -11,6 +11,7 @@ from modules.dashboard.utils import (
 )
 from modules.dashboard.actuacion_form import render_actuacion_form
 from modules.dashboard.actuacion_new import render_nueva_actuacion_form
+from modules.crm_api import actualizar as api_actualizar, catalogos as api_catalogos
 
 
 # ======================================================
@@ -25,17 +26,14 @@ COLOR_ESTADO = {
 
 def _crm_estado_id(supabase, estado: str):
     try:
-        row = (
-            supabase.table("crm_actuacion_estado")
-            .select("crm_actuacion_estadoid, estado")
-            .eq("estado", estado)
-            .single()
-            .execute()
-            .data
-        )
-        return row.get("crm_actuacion_estadoid") if row else None
+        cats = api_catalogos() or {}
+        rows = cats.get("estados") or []
+        for r in rows:
+            if r.get("estado") == estado:
+                return r.get("crm_actuacion_estadoid")
     except Exception:
-        return None
+        pass
+    return None
 
 
 # ======================================================
@@ -193,9 +191,7 @@ def _render_actuacion_card(a, clientes_map, supabase, day_index):
                     estado_id = _crm_estado_id(supabase, "Completada")
                     if estado_id:
                         payload["crm_actuacion_estadoid"] = estado_id
-                    supabase.table("crm_actuacion").update(payload).eq(
-                        "crm_actuacionid", a["crm_actuacionid"]
-                    ).execute()
+                    api_actualizar(a["crm_actuacionid"], payload)
                     st.success("Actuacion marcada como completada.")
                     st.rerun()
                 except Exception as e:
