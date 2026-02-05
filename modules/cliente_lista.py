@@ -244,6 +244,29 @@ def render_cliente_lista(API_URL: str):
         st.markdown("---")
         st.subheader("Catálogo de clientes")
 
+    # Filtros rápidos
+    quick1, quick2, quick3, quick4 = st.columns(4)
+    with quick1:
+        if st.button("Todos", use_container_width=True):
+            st.session_state["cli_tipo_filtro"] = "Todos"
+            st.session_state["cli_page"] = 1
+            st.rerun()
+    with quick2:
+        if st.button("Clientes", use_container_width=True):
+            st.session_state["cli_tipo_filtro"] = "CLIENTE"
+            st.session_state["cli_page"] = 1
+            st.rerun()
+    with quick3:
+        if st.button("Proveedores", use_container_width=True):
+            st.session_state["cli_tipo_filtro"] = "PROVEEDOR"
+            st.session_state["cli_page"] = 1
+            st.rerun()
+    with quick4:
+        if st.button("Ambos", use_container_width=True):
+            st.session_state["cli_tipo_filtro"] = "AMBOS"
+            st.session_state["cli_page"] = 1
+            st.rerun()
+
     with st.expander("Filtros avanzados", expanded=False):
         f1, f2, f3 = st.columns(3)
         with f1:
@@ -413,6 +436,9 @@ def _render_card(c: Dict[str, Any]):
     )
 
     cid = c.get("clienteid")
+    contact_line = _safe(c.get("telefono") or c.get("movil"), "")
+    if contact_line:
+        st.caption(f"Contacto: {contact_line}")
     if st.button("🔍", key=f"cli_ficha_{cid}", use_container_width=True):
         st.session_state["cliente_detalle_id"] = cid
         st.rerun()
