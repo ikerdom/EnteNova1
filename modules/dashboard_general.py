@@ -460,10 +460,11 @@ def render_dashboard(supabase):
     # ------------------------------------------------------
     # 3️⃣ ACTIVIDAD · GRÁFICAS
     # ------------------------------------------------------
-    st.subheader("📈 Actividad comercial (últimos 30 días)")
-    colA, colB = st.columns(2)
+    st.subheader("📈 Actividad y pedidos")
+    tab_act, tab_ped = st.tabs(["Actividad 30 días", "Pedidos"])
+    colA, colB = tab_act.columns(2)
 
-    # -------- Gráficas principales --------
+    # -------- Gráficas principales (Actividad) --------
     with colA:
         try:
             if supabase and _table_exists(supabase, "presupuesto"):
@@ -586,6 +587,44 @@ def render_dashboard(supabase):
     # -------- INCIDENCIAS --------
     with colB:
         render_incidencias_blocks(supabase, trabajadorid)
+
+    # -------- PEDIDOS --------
+    with tab_ped:
+        st.markdown("### Pedidos recientes")
+        ped_30 = _load_pedidos_api(fecha_inicio_30)
+        if not ped_30:
+            st.info("No hay pedidos en los últimos 30 días.")
+        else:
+            # KPIs
+            total_ped = len(ped_30)
+            total_importe = 0.0
+            for p in ped_30:
+                try:
+                    total_importe += float(p.get("total") or 0)
+                except Exception:
+                    pass
+            k1, k2, k3 = st.columns(3)
+            k1.metric("Pedidos", total_ped)
+            k2.metric("Importe total", f"{total_importe:,.2f} €".replace(",", "."))
+            k3.metric("Ticket medio", f"{(total_importe / total_ped) if total_ped else 0:,.2f} €".replace(",", "."))
+
+            # Evolución diaria
+            rows = []
+            for p in ped_30:
+                fecha = p.get("fecha_pedido")
+                if fecha:
+                    rows.append({"fecha": pd.to_datetime(fecha).date(), "total": float(p.get("total") or 0)})
+            dfp = pd.DataFrame(rows)
+            if not dfp.empty:
+                df_line = dfp.groupby("fecha")["total"].sum()
+                st.line_chart(df_line)
+
+            # Estado de pedidos
+            estados = [p.get("pedido_estado_nombre") or str(p.get("pedido_estadoid") or "-") for p in ped_30]
+            df_est = pd.DataFrame({"estado": estados})
+            if not df_est.empty:
+                st.markdown("### Estados de pedidos")
+                st.bar_chart(df_est["estado"].value_counts())
 
     st.markdown("---")
     st.caption("© 2025 EnteNova Gnosis · Orbe — Dashboard comercial y CRM")
