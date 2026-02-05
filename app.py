@@ -60,6 +60,7 @@ from modules.diagramas import render_diagramas
 from modules.cliente_lista import render_cliente_lista
 from modules.cliente_potencial_lista import render_cliente_potencial_lista
 from modules.producto_lista import render_producto_lista
+from modules.pedido_lista import render_pedido_lista
 from modules.presupuesto_lista import render_presupuesto_lista
 from modules.crm_acciones import render_crm_acciones
 from modules.historial import render_historial
@@ -118,6 +119,7 @@ if tipo_usuario == "trabajador":
         "🧾 Clientes potenciales",
         "📦 Catalogo de productos",
         "💼 Gestion de presupuestos",
+        "🧾 Gestion de pedidos",
         "🏷️ Gestion de tarifas",
         "🗓️ Calendario CRM",
         "📣 Campanas",
@@ -196,6 +198,10 @@ elif opcion == "📦 Catalogo de productos":
 elif opcion == "💼 Gestion de presupuestos":
     st.sidebar.subheader("💼 Gestion de presupuestos")
     render_presupuesto_lista(API_URL)
+
+elif opcion == "🧾 Gestion de pedidos":
+    st.sidebar.subheader("🧾 Gestion de pedidos")
+    render_pedido_lista(API_URL)
 
 elif opcion == "🏷️ Gestion de tarifas":
     st.sidebar.subheader("🏷️ Administracion de tarifas")
