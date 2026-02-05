@@ -11,8 +11,8 @@ from typing import Dict, Any, List, Optional
 # 🔹 Loaders reutilizables
 # ======================================================
 try:
-from modules.pedido_models import load_trabajadores, load_clientes
-from modules.pedido_api import detalle as pedido_detalle
+    from modules.pedido_models import load_trabajadores, load_clientes
+    from modules.pedido_api import detalle as pedido_detalle
 except Exception:
     def load_trabajadores(_supabase) -> Dict[str, int]:
         try:
