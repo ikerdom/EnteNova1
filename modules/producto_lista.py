@@ -322,28 +322,33 @@ def _render_card_producto(p: dict):
         f"""
         <div style="border:1px solid #e5e7eb;border-radius:12px;
                     background:#f9fafb;padding:12px;margin-bottom:14px;
-                    box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+                    box-shadow:0 1px 3px rgba(0,0,0,0.08);min-height:165px;">
             <div style="display:flex;gap:12px;">
                 <div style="width:{W}px;height:{H}px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;background:#fff;">
                     {portada_html}
                 </div>
                 <div style="flex:1;min-width:0;">
-                    <div style="font-size:1.05rem;font-weight:700;">{nombre}</div>
-                    <div style="color:#6b7280;font-size:.9rem;">Ref: {ref}</div>
+                    <div style="font-size:1.05rem;font-weight:700;line-height:1.1;
+                                display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+                        {nombre}
+                    </div>
+                    <div style="color:#6b7280;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                        Ref: {ref}
+                    </div>
                     <div style="margin-top:6px;font-size:.9rem;">
                         <b>Familia:</b> {familia}<br>
                         <b>Tipo:</b> {tipo}<br>
                         <b>Categoria:</b> {categoria}<br>
                         <b>Precio:</b> {precio}
                     </div>
-                    <div style="margin-top:6px;color:#6b7280;font-size:.85rem;">
+                    <div style="margin-top:6px;color:#6b7280;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                         ISBN: {isbn} | EAN: {ean}
                     </div>
                 </div>
             </div>
         </div>
         """,
-        height=170,
+        height=175,
     )
     pid = p.get("catalogo_productoid")
     b1, b2 = st.columns(2)

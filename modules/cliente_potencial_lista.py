@@ -485,23 +485,27 @@ def _render_potencial_card(c: Dict[str, Any]):
         f"""
         <div style="border:1px solid #e5e7eb;border-radius:14px;
                     background:#f9fafb;padding:14px;margin-bottom:14px;
-                    box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-                <div>
-                    <div style="font-size:1.05rem;font-weight:700;">{razon}</div>
-                    <div style="color:#6b7280;font-size:.9rem;">{cif}</div>
+                    box-shadow:0 1px 3px rgba(0,0,0,0.08);min-height:150px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:1.05rem;font-weight:700;line-height:1.1;
+                                display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+                        {razon}
+                    </div>
+                    <div style="color:#6b7280;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                        {cif}
+                    </div>
                 </div>
-                <div style="font-weight:700;color:#3b82f6;">{tipo}</div>
+                <div style="font-weight:700;color:#3b82f6;white-space:nowrap;">{tipo}</div>
             </div>
             <div style="margin-top:10px;font-size:.9rem;">
-                <b>ID:</b> {cid}<br>
                 <b>Grupo:</b> {grupo}<br>
                 <b>Codigo cuenta:</b> {codcta}<br>
                 <b>Codigo cliente/proveedor:</b> {codcp}<br>
             </div>
         </div>
         """,
-        height=210,
+        height=180,
     )
 
     b1, b2 = st.columns(2)

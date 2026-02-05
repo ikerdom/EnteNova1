@@ -33,6 +33,13 @@ def _safe(val, default="-"):
     return val if val not in (None, "", "null") else default
 
 
+def _truncate(text: str, max_len: int = 32) -> str:
+    if not text:
+        return "-"
+    txt = str(text)
+    return (txt[: max_len - 1] + "...") if len(txt) > max_len else txt
+
+
 def _render_filter_chips(items):
     active = [(k, v) for k, v in items if v]
     if not active:
@@ -292,7 +299,14 @@ def _render_card(r, estados_map: dict):
             unsafe_allow_html=True,
         )
 
-        st.caption(f"Cliente: {cliente_label} | Fecha: {fecha}")
+        st.markdown(
+            f"""
+            <div style="min-height:38px;color:#6b7280;font-size:.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                Cliente: {_truncate(cliente_label, 40)} | Fecha: {fecha}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
         if num_lineas is not None:
             st.caption(f"Lineas: {num_lineas}")
         if base_imponible is not None and iva_total is not None and total_doc is not None:
