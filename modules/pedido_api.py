@@ -21,6 +21,10 @@ def catalogos() -> dict:
     r = requests.get(f"{get_api_base()}/api/pedidos/catalogos", timeout=20)
     return _handle(r)
 
+def top_clientes(limit: int = 5) -> dict:
+    r = requests.get(f"{get_api_base()}/api/pedidos/top-clientes", params={"limit": limit}, timeout=20)
+    return _handle(r)
+
 def crear_pedido(payload: dict) -> dict:
     r = requests.post(f"{get_api_base()}/api/pedidos", json=payload, timeout=20)
     return _handle(r)

@@ -478,6 +478,34 @@ def render_cliente_lista(API_URL: str):
     with c5:
         st.button("Limpiar filtros", on_click=_clear_filters)
 
+    top_pres = _api_get_cached("/api/presupuestos/top-clientes", params={"limit": 5})
+    top_ped = _api_get_cached("/api/pedidos/top-clientes", params={"limit": 5})
+    top_pres_items = top_pres.get("data") or []
+    top_ped_items = top_ped.get("data") or []
+    if top_pres_items or top_ped_items:
+        st.caption("Top clientes")
+        cols = st.columns(2)
+        with cols[0]:
+            if top_pres_items:
+                st.caption("Presupuestos")
+                for it in top_pres_items:
+                    label = it.get("label") or f"Cliente {it.get('clienteid')}"
+                    count = it.get("count") or 0
+                    if st.button(f"{label} · {count}", key=f"cli_top_pres_{it.get('clienteid')}"):
+                        st.session_state["cli_q"] = label
+                        st.session_state["cli_page"] = 1
+                        st.rerun()
+        with cols[1]:
+            if top_ped_items:
+                st.caption("Pedidos")
+                for it in top_ped_items:
+                    label = it.get("label") or f"Cliente {it.get('clienteid')}"
+                    count = it.get("count") or 0
+                    if st.button(f"{label} · {count}", key=f"cli_top_ped_{it.get('clienteid')}"):
+                        st.session_state["cli_q"] = label
+                        st.session_state["cli_page"] = 1
+                        st.rerun()
+
     st.markdown("---")
 
     sel = st.session_state.get("cliente_detalle_id")
@@ -486,23 +514,23 @@ def render_cliente_lista(API_URL: str):
         st.markdown("---")
         st.subheader("Catálogo de clientes")
 
-    st.subheader("Comprar clientes (max 3)")
+    st.subheader("Comparar clientes (max 3)")
     compare_items = st.session_state.get("cli_compare", [])
     if st.session_state.pop("cli_compare_full", False):
         st.warning("Puedes comparar hasta 3 clientes.")
     if compare_items:
-        for item in compare_items:
-            with st.container(border=True):
-                left, right = st.columns([6, 1])
-                with left:
-                    st.markdown(f"**{item['label']}**")
-                    if item.get("cif"):
-                        st.caption(f"CIF/DNI: {item['cif']}")
-                with right:
-                    st.button("Quitar", key=f"cmp_rm_{item['id']}", on_click=_compare_remove, args=(item["id"],))
-        st.button("Limpiar compra", key="cmp_clear", on_click=lambda: st.session_state.update({"cli_compare": []}))
+        cols_cmp = st.columns(min(3, len(compare_items)))
+        for i, item in enumerate(compare_items):
+            label = item["label"]
+            cif = item.get("cif")
+            txt = f"{label}" + (f" · {cif}" if cif else "")
+            if cols_cmp[i % len(cols_cmp)].button(f"✕ {txt}", key=f"cmp_rm_{item['id']}"):
+                _compare_remove(item["id"])
+                st.rerun()
+        st.caption("Abre un cliente para ver la comparativa izquierda/derecha.")
+        st.button("Limpiar comparativa", key="cmp_clear", on_click=lambda: st.session_state.update({"cli_compare": []}))
     else:
-        st.caption("Selecciona clientes con el botón Comprar en la lista.")
+        st.caption("Selecciona clientes con el botón Comparar en la lista.")
 
     with st.expander("Filtros avanzados", expanded=False):
         f1, f2, f3 = st.columns(3)
@@ -641,7 +669,7 @@ def render_cliente_lista(API_URL: str):
                 st.session_state["cliente_detalle_id"] = label_map[elegido]
                 st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
-            if st.button("Comprar", key="cli_table_buy"):
+            if st.button("Comparar", key="cli_table_buy"):
                 cid = label_map[elegido]
                 label = elegido
                 cif = next((c.get("cifdni") for c in clientes if c.get("clienteid") == cid), "")
@@ -710,15 +738,16 @@ def _render_card(c: Dict[str, Any]):
     contact_line = _safe(c.get("telefono") or c.get("movil"), "")
     if contact_line:
         st.caption(f"Contacto: {contact_line}")
-    st.markdown('<div class="card-actions"><div class="icon-btn">', unsafe_allow_html=True)
-    if st.button("🔍", key=f"cli_detalle_{cid}"):
-        st.session_state["cliente_detalle_id"] = cid
-        st.rerun()
-    if st.button("🛒", key=f"cli_buy_{cid}"):
-        label = c.get("razonsocial") or c.get("nombre") or "Cliente"
-        cif = c.get("cifdni") or ""
-        _compare_add(cid, label, _safe(cif, ""))
-    st.markdown("</div></div>", unsafe_allow_html=True)
+    _, action_col = st.columns([5, 1])
+    with action_col:
+        with st.popover("⋯", use_container_width=True):
+            if st.button("Ver detalle", key=f"cli_detalle_{cid}"):
+                st.session_state["cliente_detalle_id"] = cid
+                st.rerun()
+            if st.button("Comparar", key=f"cli_cmp_{cid}"):
+                label = c.get("razonsocial") or c.get("nombre") or "Cliente"
+                cif = c.get("cifdni") or ""
+                _compare_add(cid, label, _safe(cif, ""))
 
 
 def _render_detalle_panel(clienteid: int):

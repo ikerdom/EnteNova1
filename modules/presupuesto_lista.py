@@ -380,12 +380,13 @@ def _render_card(r, estados_map: dict):
         else:
             st.caption(f"Total: {total_doc}")
 
-        st.markdown('<div class="card-actions"><div class="icon-btn">', unsafe_allow_html=True)
-        if st.button("🔍", key=f"pres_detalle_{pres_id}"):
-            st.session_state["presupuesto_modal_id"] = pres_id
-            st.session_state["show_presupuesto_modal"] = True
-            st.rerun()
-        st.markdown("</div></div>", unsafe_allow_html=True)
+        _, action_col = st.columns([5, 1])
+        with action_col:
+            with st.popover("⋯", use_container_width=True):
+                if st.button("Ver detalle", key=f"pres_detalle_{pres_id}"):
+                    st.session_state["presupuesto_modal_id"] = pres_id
+                    st.session_state["show_presupuesto_modal"] = True
+                    st.rerun()
 
 
 def _render_table(rows):

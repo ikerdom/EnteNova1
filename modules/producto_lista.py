@@ -113,6 +113,7 @@ def _prod_compare_add(pid: Any, label: str):
         return
     items.append({"id": pid, "label": label})
     st.session_state["prod_compare"] = items
+    st.session_state["prod_compare_last"] = label
 
 
 def _prod_compare_remove(pid: Any):
@@ -351,6 +352,15 @@ def render_producto_lista(supabase=None):
 
     st.header("Gestion de productos")
     st.caption("Listado, filtros y acceso rapido al detalle del producto.")
+    last_added = st.session_state.pop("prod_compare_last", None)
+    if last_added:
+        with st.container(border=True):
+            c1, c2 = st.columns([6, 1])
+            with c1:
+                st.markdown(f"**Añadido a comparativa:** {last_added}")
+                st.caption("Abre un producto para ver la comparativa izquierda/derecha.")
+            with c2:
+                st.button("OK", key="prod_cmp_ok")
 
     st.session_state.setdefault("prod_show_form", False)
     if st.session_state.get("prod_detalle_id"):
@@ -475,16 +485,19 @@ def render_producto_lista(supabase=None):
     if st.session_state.pop("prod_compare_full", False):
         st.warning("Puedes comparar hasta 3 productos.")
     if compare_items:
-        for item in compare_items:
-            with st.container(border=True):
-                left, right = st.columns([6, 1])
-                with left:
-                    st.markdown(f"**{item['label']}**")
-                with right:
-                    st.button("Quitar", key=f"prod_cmp_rm_{item['id']}", on_click=_prod_compare_remove, args=(item["id"],))
+        cols_cmp = st.columns(min(3, len(compare_items)))
+        for i, item in enumerate(compare_items):
+            label = item["label"]
+            if cols_cmp[i % len(cols_cmp)].button(f"✕ {label}", key=f"prod_cmp_rm_{item['id']}"):
+                _prod_compare_remove(item["id"])
+                st.rerun()
+        if len(compare_items) == 1:
+            st.caption("Comparativa pendiente: elige otro producto.")
+        else:
+            st.caption("Abre un producto para ver la comparativa izquierda/derecha.")
         st.button("Limpiar comparativa", key="prod_cmp_clear", on_click=lambda: st.session_state.update({"prod_compare": []}))
     else:
-        st.caption("Selecciona productos con el botón 🛒 en la lista.")
+        st.caption("Selecciona productos con el botón Comparar en la lista.")
         if st.session_state["prod_view"] == "Tabla":
             all_cols = [
                 "catalogo_productoid",
@@ -642,13 +655,16 @@ def _render_card_producto(p: dict):
     )
     pid = p.get("catalogo_productoid")
     st.markdown('<div class="card-actions"><div class="icon-btn">', unsafe_allow_html=True)
-    if st.button("🔍", key=f"prod_detalle_{pid}"):
-        st.session_state["prod_detalle_id"] = pid
-        st.rerun()
-    if st.button("🛒", key=f"prod_buy_{pid}"):
-        label = p.get("titulo_automatico") or f"Producto {pid}"
-        _prod_compare_add(pid, label)
     st.markdown("</div></div>", unsafe_allow_html=True)
+    _, action_col = st.columns([5, 1])
+    with action_col:
+        with st.popover("⋯", use_container_width=True):
+            if st.button("Ver detalle", key=f"prod_detalle_{pid}"):
+                st.session_state["prod_detalle_id"] = pid
+                st.rerun()
+            if st.button("Comparar", key=f"prod_cmp_{pid}"):
+                label = p.get("titulo_automatico") or f"Producto {pid}"
+                _prod_compare_add(pid, label)
 
 
 def _render_tabla_productos(productos: list):
@@ -683,7 +699,7 @@ def _render_tabla_productos(productos: list):
             st.session_state["prod_detalle_id"] = label_map[elegido]
             st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
-        if st.button("Comprar", key="prod_sel_buy"):
+        if st.button("Comparar", key="prod_sel_buy"):
             pid = label_map[elegido]
             label = elegido.split(" - ", 1)[-1] if " - " in elegido else elegido
             _prod_compare_add(pid, label)
@@ -713,11 +729,6 @@ def _render_modal_producto(productoid: int, supabase=None):
     with top1:
         st.subheader(titulo)
     with top2:
-        if st.button("✏️ Editar", key=f"prod_edit_{productoid}", use_container_width=True):
-            st.session_state["prod_show_form"] = True
-            st.session_state["prod_detalle_id"] = None
-            st.session_state["producto_actual"] = productoid
-            st.rerun()
         if st.button("Agregar a comparar", key=f"prod_cmp_add_{productoid}", use_container_width=True):
             _prod_compare_add(productoid, titulo)
 

@@ -172,7 +172,7 @@ def render_crm_acciones(_supabase_unused=None, clienteid: Optional[int] = None):
         col1.button("Anterior", on_click=_mover, args=(-1,), key="btn_prev")
         col2.button("Siguiente", on_click=_mover, args=(1,), key="btn_next")
 
-    f1, f2, f3, f4, f5 = st.columns(5)
+    f1, f2, f3, f4, f5, f6 = st.columns(6)
     filtro_estado = f1.selectbox("Estado", ["Todos"] + list(estados_map.keys()), index=0)
     filtro_tipo = f2.selectbox("Tipo", ["Todos"] + list(tipos_map.keys()), index=0)
     buscar = f3.text_input("Buscar titulo...", placeholder="Ej: llamada, presupuesto, reunion")
@@ -186,8 +186,24 @@ def render_crm_acciones(_supabase_unused=None, clienteid: Optional[int] = None):
         ["Todo", "Hoy", "7 dias", "30 dias"],
         index=["Todo", "Hoy", "7 dias", "30 dias"].index(st.session_state.get("crm_rango", "Todo")),
     )
+    if f6.button("Limpiar filtros"):
+        st.session_state["crm_modo"] = "Calendario"
+        st.session_state["crm_rango"] = "Todo"
+        st.rerun()
     st.session_state["crm_rango"] = rango
     st.session_state["crm_modo"] = modo_vista
+
+    chips = []
+    if filtro_estado != "Todos":
+        chips.append(f"Estado: {filtro_estado}")
+    if filtro_tipo != "Todos":
+        chips.append(f"Tipo: {filtro_tipo}")
+    if buscar:
+        chips.append(f"Buscar: {buscar}")
+    if rango != "Todo":
+        chips.append(f"Rango: {rango}")
+    if chips:
+        st.caption(" · ".join(chips))
 
     with st.expander("Nueva accion", expanded=False):
         with st.form("form_accion"):

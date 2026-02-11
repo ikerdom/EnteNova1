@@ -22,7 +22,7 @@ def render_albaran_form(_supabase_unused, clienteid: int):
     st.session_state.setdefault(f"alb_page_size_{clienteid}", 10)
     st.session_state.setdefault(f"alb_last_q_{clienteid}", "")
 
-    c1, c2, c3 = st.columns([3, 1, 1])
+    c1, c2, c3, c4 = st.columns([3, 1, 1, 1])
     with c1:
         q = st.text_input(
             "Buscar",
@@ -47,6 +47,16 @@ def render_albaran_form(_supabase_unused, clienteid: int):
             disabled=not use_hasta,
             label_visibility="collapsed",
         )
+    with c4:
+        if st.button("Limpiar", key=f"alb_clear_{clienteid}"):
+            st.session_state[f"alb_q_{clienteid}"] = ""
+            st.session_state[f"alb_estado_{clienteid}"] = ""
+            st.session_state[f"alb_tipo_{clienteid}"] = ""
+            st.session_state[f"alb_use_desde_{clienteid}"] = False
+            st.session_state[f"alb_use_hasta_{clienteid}"] = False
+            st.session_state[f"alb_desde_{clienteid}"] = date.today()
+            st.session_state[f"alb_hasta_{clienteid}"] = date.today()
+            st.rerun()
 
     f1, f2, f3 = st.columns(3)
     with f1:
@@ -67,6 +77,20 @@ def render_albaran_form(_supabase_unused, clienteid: int):
             ["fecha_albaran", "numero", "albaran_id"],
             key=f"alb_sort_{clienteid}",
         )
+
+    chips = []
+    if q:
+        chips.append(f"Buscar: {q}")
+    if filtro_estado:
+        chips.append(f"Estado: {filtro_estado}")
+    if filtro_tipo:
+        chips.append(f"Tipo: {filtro_tipo}")
+    if use_desde:
+        chips.append(f"Desde: {fecha_desde.isoformat()}")
+    if use_hasta:
+        chips.append(f"Hasta: {fecha_hasta.isoformat()}")
+    if chips:
+        st.caption(" · ".join(chips))
 
     page_size = st.selectbox(
         "Ver por página",

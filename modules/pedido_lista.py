@@ -12,6 +12,7 @@ from modules.pedido_api import (
     observaciones,
     crear_observacion,
     catalogos,
+    top_clientes as pedidos_top_clientes,
     agregar_linea,
     borrar_linea,
 )
@@ -144,7 +145,7 @@ def render_pedido_lista(_supabase=None):
         "pedido_compact": st.session_state.get("pref_compact", True),
         "pedido_edit_open": False,
         "pedido_cliente": "Todos",
-        "pedido_procedencia": "Todas",
+        "pedido_procedencia": "",
         "pedido_ref": "",
         "pedido_cif": "",
         "pedido_total_min": None,
@@ -176,6 +177,12 @@ def render_pedido_lista(_supabase=None):
         formas_pago_map = {}
         formas_pago_rev = {}
 
+    try:
+        top = pedidos_top_clientes(5)
+        top_items = top.get("data") or []
+    except Exception:
+        top_items = []
+
     if session.get("pedido_show_form"):
         st.markdown("### Editor de pedido (cabecera)")
         try:
@@ -183,6 +190,18 @@ def render_pedido_lista(_supabase=None):
         except Exception as e:
             st.error(f"Error abriendo formulario: {e}")
         st.markdown("---")
+
+    if top_items:
+        st.caption("Top 5 clientes con más pedidos")
+        cols_top = st.columns(min(5, len(top_items)))
+        for i, it in enumerate(top_items):
+            label = it.get("label") or f"Cliente {it.get('clienteid')}"
+            count = it.get("count") or 0
+            if cols_top[i % len(cols_top)].button(f"{label} · {count}", key=f"ped_top_{it.get('clienteid')}"):
+                if label in clientes_map:
+                    st.session_state["pedido_cliente"] = label
+                st.session_state["pedido_page"] = 1
+                st.rerun()
 
     colf1, colf2, colf3, colf4, colf5 = st.columns([3, 2, 2, 2, 1])
     with colf1:
@@ -380,14 +399,15 @@ def _render_pedido_card(p, estados_rev, clientes_rev):
     )
 
     colA, colB, colC = st.columns(3)
-    st.markdown('<div class="card-actions"><div class="icon-btn">', unsafe_allow_html=True)
-    if st.button("🔍", key=f"detalle_{p['pedido_id']}"):
-        st.session_state["pedido_modal_id"] = p["pedido_id"]
-        st.session_state["show_pedido_modal"] = True
-        st.session_state["pedido_show_form"] = False
-        st.session_state["pedido_edit_open"] = False
-        st.rerun()
-    st.markdown("</div></div>", unsafe_allow_html=True)
+    _, action_col = st.columns([5, 1])
+    with action_col:
+        with st.popover("⋯", use_container_width=True):
+            if st.button("Ver detalle", key=f"detalle_{p['pedido_id']}"):
+                st.session_state["pedido_modal_id"] = p["pedido_id"]
+                st.session_state["show_pedido_modal"] = True
+                st.session_state["pedido_show_form"] = False
+                st.session_state["pedido_edit_open"] = False
+                st.rerun()
 
 
 def _render_pedido_modal(

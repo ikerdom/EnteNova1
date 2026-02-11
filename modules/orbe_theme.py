@@ -22,9 +22,9 @@ def apply_orbe_theme():
         --bg-2: #e9f2f7;
         --ink-1: #0b2c3d;
         --ink-2: #123b4f;
-        --accent: #e85d3f;
-        --accent-2: #c6472c;
-        --accent-warm: #f3b340;
+        --accent: #2563eb;
+        --accent-2: #1d4ed8;
+        --accent-warm: #60a5fa;
         --card: #ffffff;
         --border: #cfe2ee;
         --shadow: 0 12px 28px rgba(12, 38, 55, 0.10);
@@ -84,7 +84,7 @@ def apply_orbe_theme():
 
     input:focus, textarea:focus, select:focus {
         outline: none !important;
-        box-shadow: 0 0 0 2px rgba(232, 93, 63, 0.25) !important;
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25) !important;
         border-color: var(--accent) !important;
     }
 

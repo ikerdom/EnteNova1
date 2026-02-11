@@ -20,6 +20,15 @@ def render_incidencia_lista(supabase):
 
     session = st.session_state
     session.setdefault("inci_view", "Tarjetas")
+    session.setdefault("inci_q", "")
+    session.setdefault("inci_from", None)
+    session.setdefault("inci_to", None)
+
+    def _clear_inci_filters():
+        st.session_state["inci_q"] = ""
+        st.session_state["inci_from"] = None
+        st.session_state["inci_to"] = None
+        st.session_state["inci_view"] = "Tarjetas"
 
     trabajadores = _load_trabajadores(supabase)
 
@@ -99,7 +108,7 @@ def render_incidencia_lista(supabase):
     # ----------------------------
     # Filtros
     # ----------------------------
-    col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
+    col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 2, 1])
     with col1:
         tipo_sel = st.selectbox("Origen tipo", ["Todos", "cliente", "pedido", "producto", "otro"])
     with col2:
@@ -107,8 +116,34 @@ def render_incidencia_lista(supabase):
     with col3:
         asignado_sel = st.selectbox("Responsable", ["Todos"] + list(trabajadores.keys()))
     with col4:
+        q = st.text_input("Buscar", key="inci_q", placeholder="Titulo o descripcion...")
+    with col5:
         view = st.radio("Vista", ["Tarjetas", "Tabla"], horizontal=True, key="inci_view")
 
+    d1, d2, d3 = st.columns([2, 2, 1])
+    with d1:
+        fecha_desde = st.date_input("Desde", value=st.session_state.get("inci_from"), key="inci_from")
+    with d2:
+        fecha_hasta = st.date_input("Hasta", value=st.session_state.get("inci_to"), key="inci_to")
+    with d3:
+        st.button("Limpiar filtros", on_click=_clear_inci_filters, use_container_width=True)
+
+    # Chips compactos
+    chips = []
+    if tipo_sel != "Todos":
+        chips.append(f"Origen: {tipo_sel}")
+    if estado_sel != "Todos":
+        chips.append(f"Estado: {estado_sel}")
+    if asignado_sel != "Todos":
+        chips.append(f"Resp: {asignado_sel}")
+    if q:
+        chips.append(f"Buscar: {q}")
+    if fecha_desde:
+        chips.append(f"Desde: {fecha_desde.isoformat()}")
+    if fecha_hasta:
+        chips.append(f"Hasta: {fecha_hasta.isoformat()}")
+    if chips:
+        st.caption(" · ".join(chips))
     # ----------------------------
     # Query principal
     # ----------------------------
@@ -121,6 +156,13 @@ def render_incidencia_lista(supabase):
             base = base.eq("estado", estado_sel)
         if asignado_sel != "Todos":
             base = base.eq("responsableid", trabajadores[asignado_sel])
+        if q:
+            term = q.strip()
+            base = base.or_(f"incidencia_titulo.ilike.%{term}%,descripcion.ilike.%{term}%,tipo.ilike.%{term}%")
+        if fecha_desde:
+            base = base.gte("fecha_creacion", fecha_desde.isoformat())
+        if fecha_hasta:
+            base = base.lte("fecha_creacion", fecha_hasta.isoformat())
         data = base.order("fecha_creacion", desc=True).limit(150).execute()
         incidencias = data.data or []
     except Exception as e:
