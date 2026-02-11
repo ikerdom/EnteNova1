@@ -56,6 +56,38 @@ def _ensure_icon_css():
     )
 
 
+def _render_filter_buttons(items):
+    active = [(k, v, fn) for k, v, fn in items if v]
+    if not active:
+        return
+    cols = st.columns(min(4, len(active)))
+    for i, (label, value, fn) in enumerate(active):
+        col = cols[i % len(cols)]
+        if col.button(f"✕ {label}: {value}", key=f"ped_chip_{i}_{label}"):
+            fn()
+            st.rerun()
+
+
+def _clear_pedido_filters():
+    st.session_state["pedido_q"] = ""
+    st.session_state["pedido_estado"] = "Todos"
+    st.session_state["pedido_pago"] = "Todas"
+    st.session_state["pedido_cliente"] = "Todos"
+    st.session_state["pedido_procedencia"] = ""
+    st.session_state["pedido_ref"] = ""
+    st.session_state["pedido_cif"] = ""
+    st.session_state["pedido_total_min"] = None
+    st.session_state["pedido_total_max"] = None
+    st.session_state["pedido_tipodoc"] = ""
+    st.session_state["pedido_tipo_docid"] = None
+    st.session_state["pedido_estado_nombre"] = ""
+    st.session_state["pedido_comp_from"] = None
+    st.session_state["pedido_comp_to"] = None
+    st.session_state["pedido_from"] = None
+    st.session_state["pedido_to"] = None
+    st.session_state["pedido_page"] = 1
+
+
 def _label_from(catalog: dict, id_val) -> str:
     if not id_val:
         return "-"
@@ -111,6 +143,17 @@ def render_pedido_lista(_supabase=None):
         "pedido_modal_id": None,
         "pedido_compact": st.session_state.get("pref_compact", True),
         "pedido_edit_open": False,
+        "pedido_cliente": "Todos",
+        "pedido_procedencia": "Todas",
+        "pedido_ref": "",
+        "pedido_cif": "",
+        "pedido_total_min": None,
+        "pedido_total_max": None,
+        "pedido_tipodoc": "",
+        "pedido_tipo_docid": None,
+        "pedido_estado_nombre": "",
+        "pedido_comp_from": None,
+        "pedido_comp_to": None,
     }
     for k, v in defaults.items():
         session.setdefault(k, v)
@@ -141,21 +184,75 @@ def render_pedido_lista(_supabase=None):
             st.error(f"Error abriendo formulario: {e}")
         st.markdown("---")
 
-    colf1, colf2, colf3, colf4 = st.columns([3, 2, 2, 1])
+    colf1, colf2, colf3, colf4, colf5 = st.columns([3, 2, 2, 2, 1])
     with colf1:
         q = st.text_input("🔍 Buscar (id / referencia / cliente)", key="pedido_q")
     with colf2:
-        estado_sel = st.selectbox("Estado", ["Todos"] + list(estados_map.keys()), key="pedido_estado")
+        cliente_sel = st.selectbox("Cliente", ["Todos"] + list(clientes_map.keys()), key="pedido_cliente")
     with colf3:
-        forma_sel = st.selectbox("Forma de pago", ["Todas"] + list(formas_pago_map.keys()), key="pedido_pago")
+        estado_sel = st.selectbox("Estado", ["Todos"] + list(estados_map.keys()), key="pedido_estado")
     with colf4:
+        forma_sel = st.selectbox("Forma de pago", ["Todas"] + list(formas_pago_map.keys()), key="pedido_pago")
+    with colf5:
         view = st.radio("Vista", ["Tarjetas", "Tabla"], horizontal=True, key="pedido_view")
 
-    colf5, colf6 = st.columns([2, 2])
-    with colf5:
-        fecha_desde = st.date_input("Desde", value=None, key="pedido_from")
+    colf6, colf7, colf8, colf9 = st.columns([2, 2, 2, 1])
     with colf6:
-        fecha_hasta = st.date_input("Hasta", value=None, key="pedido_to")
+        fecha_desde = st.date_input("Desde", value=st.session_state.get("pedido_from"), key="pedido_from")
+    with colf7:
+        fecha_hasta = st.date_input("Hasta", value=st.session_state.get("pedido_to"), key="pedido_to")
+    with colf8:
+        procedencia = st.text_input("Procedencia", key="pedido_procedencia")
+    with colf9:
+        st.button("Limpiar filtros", on_click=_clear_pedido_filters, use_container_width=True)
+
+    with st.expander("Filtros avanzados", expanded=False):
+        total_min_val = float(st.session_state.get("pedido_total_min") or 0.0)
+        total_max_val = float(st.session_state.get("pedido_total_max") or 0.0)
+        a1, a2, a3, a4 = st.columns([2, 2, 2, 2])
+        with a1:
+            ref_cli = st.text_input("Referencia cliente", key="pedido_ref")
+        with a2:
+            cif_cli = st.text_input("CIF cliente", key="pedido_cif")
+        with a3:
+            total_min = st.number_input("Total mínimo", min_value=0.0, value=total_min_val, step=1.0, key="pedido_total_min")
+        with a4:
+            total_max = st.number_input("Total máximo", min_value=0.0, value=total_max_val, step=1.0, key="pedido_total_max")
+
+        b1, b2, b3, b4 = st.columns([2, 2, 2, 2])
+        with b1:
+            estado_nombre = st.text_input("Estado (texto)", key="pedido_estado_nombre")
+        with b2:
+            tipodoc = st.text_input("Tipo doc", key="pedido_tipodoc")
+        with b3:
+            tipo_docid = st.number_input("Tipo doc ID", min_value=0, value=0, step=1, key="pedido_tipo_docid")
+        with b4:
+            comp_from = st.date_input("Completado desde", value=st.session_state.get("pedido_comp_from"), key="pedido_comp_from")
+
+        c1, c2 = st.columns(2)
+        with c1:
+            comp_to = st.date_input("Completado hasta", value=st.session_state.get("pedido_comp_to"), key="pedido_comp_to")
+        with c2:
+            st.caption("Filtra por fecha de completado cuando exista.")
+
+    _render_filter_buttons([
+        ("Cliente", None if cliente_sel == "Todos" else cliente_sel, lambda: st.session_state.update({"pedido_cliente": "Todos"})),
+        ("Estado", None if estado_sel == "Todos" else estado_sel, lambda: st.session_state.update({"pedido_estado": "Todos"})),
+        ("Forma", None if forma_sel == "Todas" else forma_sel, lambda: st.session_state.update({"pedido_pago": "Todas"})),
+        ("Procedencia", procedencia or None, lambda: st.session_state.update({"pedido_procedencia": ""})),
+        ("Referencia", ref_cli or None, lambda: st.session_state.update({"pedido_ref": ""})),
+        ("CIF", cif_cli or None, lambda: st.session_state.update({"pedido_cif": ""})),
+        ("Estado texto", estado_nombre or None, lambda: st.session_state.update({"pedido_estado_nombre": ""})),
+        ("Tipo doc", tipodoc or None, lambda: st.session_state.update({"pedido_tipodoc": ""})),
+        ("Tipo doc ID", str(tipo_docid) if tipo_docid else None, lambda: st.session_state.update({"pedido_tipo_docid": None})),
+        ("Total ≥", f"{total_min:.2f}" if total_min and total_min > 0 else None, lambda: st.session_state.update({"pedido_total_min": None})),
+        ("Total ≤", f"{total_max:.2f}" if total_max and total_max > 0 else None, lambda: st.session_state.update({"pedido_total_max": None})),
+        ("Desde", fecha_desde.isoformat() if fecha_desde else None, lambda: st.session_state.update({"pedido_from": None})),
+        ("Hasta", fecha_hasta.isoformat() if fecha_hasta else None, lambda: st.session_state.update({"pedido_to": None})),
+        ("Comp. desde", comp_from.isoformat() if comp_from else None, lambda: st.session_state.update({"pedido_comp_from": None})),
+        ("Comp. hasta", comp_to.isoformat() if comp_to else None, lambda: st.session_state.update({"pedido_comp_to": None})),
+        ("Buscar", (q or "").strip() or None, lambda: st.session_state.update({"pedido_q": ""})),
+    ])
 
     if st.button("🆕 Nuevo pedido", use_container_width=True):
         session["pedido_show_form"] = True
@@ -170,10 +267,21 @@ def render_pedido_lista(_supabase=None):
         per_page = page_size_cards if view == "Tarjetas" else page_size_table
         params = {
             "q": q or None,
+            "clienteid": clientes_map.get(cliente_sel) if cliente_sel != "Todos" else None,
             "estadoid": estados_map.get(estado_sel) if estado_sel != "Todos" else None,
             "forma_pagoid": formas_pago_map.get(forma_sel) if forma_sel != "Todas" else None,
+            "pedido_procedencia": procedencia or None,
+            "pedido_estado_nombre": estado_nombre or None,
+            "tipodoc": tipodoc or None,
+            "pedido_tipo_documentoid": int(tipo_docid) if tipo_docid else None,
+            "referencia_cliente": ref_cli or None,
+            "cif_cliente": cif_cli or None,
+            "total_min": float(total_min) if total_min and total_min > 0 else None,
+            "total_max": float(total_max) if total_max and total_max > 0 else None,
             "fecha_desde": fecha_desde.isoformat() if fecha_desde else None,
             "fecha_hasta": fecha_hasta.isoformat() if fecha_hasta else None,
+            "fecha_completado_desde": comp_from.isoformat() if comp_from else None,
+            "fecha_completado_hasta": comp_to.isoformat() if comp_to else None,
             "page": session.pedido_page,
             "page_size": per_page,
         }

@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 import requests
+import pandas as pd
 import streamlit as st
 from streamlit.components.v1 import html as st_html
 
@@ -23,14 +24,20 @@ def _api_base() -> str:
         )
 
 
-def _api_get(path: str, params: Optional[dict] = None) -> dict:
+def _api_get(path: str, params: Optional[dict] = None, show_error: bool = True) -> dict:
     try:
         r = requests.get(f"{_api_base()}{path}", params=params, timeout=20)
         r.raise_for_status()
         return r.json()
     except Exception as e:
-        st.error(f"Error API: {e}")
+        if show_error:
+            st.error(f"Error API: {e}")
         return {}
+
+
+@st.cache_data(ttl=60)
+def _api_get_cached(path: str, params: Optional[dict] = None) -> dict:
+    return _api_get(path, params=params, show_error=False)
 
 
 def _ensure_icon_css():
@@ -78,6 +85,196 @@ def _as_int(v: Any) -> Optional[int]:
         return int(v)
     except Exception:
         return None
+
+
+def _on_filter_change():
+    st.session_state["prod_page"] = 1
+
+
+def _clear_prod_filters():
+    st.session_state["prod_q"] = ""
+    st.session_state["prod_familia"] = "Todas"
+    st.session_state["prod_tipo"] = "Todos"
+    st.session_state["prod_categoria"] = "Todas"
+    st.session_state["prod_f_titulo"] = ""
+    st.session_state["prod_f_idproducto"] = ""
+    st.session_state["prod_f_ref"] = ""
+    st.session_state["prod_f_isbn"] = ""
+    st.session_state["prod_f_ean"] = ""
+    st.session_state["prod_page"] = 1
+
+
+def _prod_compare_add(pid: Any, label: str):
+    items = st.session_state.setdefault("prod_compare", [])
+    if any(i["id"] == pid for i in items):
+        return
+    if len(items) >= 3:
+        st.session_state["prod_compare_full"] = True
+        return
+    items.append({"id": pid, "label": label})
+    st.session_state["prod_compare"] = items
+
+
+def _prod_compare_remove(pid: Any):
+    items = st.session_state.get("prod_compare", [])
+    st.session_state["prod_compare"] = [i for i in items if i["id"] != pid]
+
+
+@st.cache_data(ttl=120)
+def _fetch_producto_detalle_cached(productoid: int) -> dict:
+    try:
+        res = requests.get(f"{_api_base()}/api/productos/{productoid}", timeout=15)
+        res.raise_for_status()
+        return res.json() or {}
+    except Exception as e:
+        return {"_error": str(e)}
+
+
+def _fetch_producto_detalle(productoid: int) -> dict:
+    return _fetch_producto_detalle_cached(productoid)
+
+
+def _render_compare_card_producto(data: dict, title: str):
+    p = data.get("producto", data)
+    nombre = p.get("titulo_automatico") or title
+    portada = (p.get("portada_url") or "").strip()
+    if portada and not portada.startswith("http"):
+        portada = ""
+    with st.container(border=True):
+        top_l, top_r = st.columns([3, 1])
+        with top_l:
+            st.markdown(f"### {nombre}")
+            st.caption(title)
+        with top_r:
+            st.markdown(f"**{_price(p.get('pvp'))}**")
+        left, right = st.columns([1, 2])
+        with left:
+            if portada:
+                st.image(portada, width=160)
+            else:
+                st.info("Sin portada")
+        with right:
+            k1, k2, k3 = st.columns(3)
+            k1.metric("Familia", p.get("familia") or "-")
+            k2.metric("Tipo", p.get("tipo") or "-")
+            k3.metric("Categoría", p.get("categoria") or "-")
+            st.markdown("**Identificadores**")
+            d1, d2, d3 = st.columns(3)
+            d1.write(f"**ID catálogo:** {p.get('catalogo_productoid') or '-'}")
+            d2.write(f"**ID producto:** {p.get('idproducto') or '-'}")
+            d3.write(f"**Ref. producto (Cloudia):** {p.get('idproductoreferencia') or '-'}")
+            d4, d5 = st.columns(2)
+            d4.write(f"**ISBN:** {p.get('isbn') or '-'}")
+            d5.write(f"**EAN:** {p.get('ean') or '-'}")
+            st.markdown("**Detalles**")
+            d6, d7 = st.columns(2)
+            d6.write(f"**Proveedor:** {p.get('proveedor') or '-'}")
+            d7.write(f"**Cuerpo certificado:** {p.get('cuerpo_certificado') or '-'}")
+            d8, d9 = st.columns(2)
+            autor = " ".join([x for x in [p.get('autor_nombre'), p.get('autor_apellidos')] if x])
+            d8.write(f"**Autor:** {autor or '-'}")
+            d9.write(f"**Páginas:** {p.get('total_paginas') or '-'}")
+            d10, d11 = st.columns(2)
+            d10.write(f"**Tipo producto:** {p.get('tipo_producto') or '-'}")
+            d11.write(f"**Categoría raíz:** {p.get('categoria_raiz') or '-'}")
+
+
+def _render_compare_panel_producto(main_productoid: int):
+    compare_items = [i for i in st.session_state.get("prod_compare", []) if i["id"] != main_productoid]
+    st.markdown("---")
+    st.subheader("Vista comparativa")
+    st.caption("Coloca productos a la izquierda y derecha para verlos a la vez.")
+    search_col, add_col = st.columns([3, 1])
+    with search_col:
+        q_cmp = st.text_input("Buscar producto para comparar", key=f"cmp_prod_q_{main_productoid}")
+    with add_col:
+        st.markdown(" ")
+        st.markdown(" ")
+        add_clicked = st.button("Buscar", key=f"cmp_prod_search_{main_productoid}")
+
+    options = []
+    if q_cmp and add_clicked:
+        payload = _api_get_cached("/api/productos", params={"q": q_cmp, "page": 1, "page_size": 10})
+        for p in payload.get("data", []):
+            label = p.get("titulo_automatico") or f"Producto {p.get('catalogo_productoid')}"
+            options.append((f"{label} · {p.get('idproductoreferencia') or '-'}", p.get("catalogo_productoid")))
+    if options:
+        label_map = {label: pid for label, pid in options}
+        elegido = st.selectbox("Resultados", options=list(label_map.keys()), key=f"cmp_prod_pick_{main_productoid}")
+        if st.button("Añadir a comparar", key=f"cmp_prod_add_{main_productoid}"):
+            pid = label_map[elegido]
+            label = elegido.split(" · ")[0]
+            _prod_compare_add(pid, label)
+
+    if not compare_items:
+        st.info("No hay productos añadidos para comparar. Usa el botón 🛒 o la búsqueda arriba.")
+        return
+
+    layout = st.radio(
+        "Diseño",
+        ["Izquierda/Derecha", "Tabla"],
+        horizontal=True,
+        key=f"cmp_prod_layout_{main_productoid}",
+    )
+    entries = [{"id": main_productoid, "label": "Producto actual"}] + compare_items
+    payloads = []
+    for item in entries:
+        data = _fetch_producto_detalle(int(item["id"]))
+        payloads.append((item, data))
+
+    if layout == "Tabla":
+        rows = [
+            ("Nombre", "titulo_automatico"),
+            ("Ref. (Cloudia)", "idproductoreferencia"),
+            ("ID producto", "idproducto"),
+            ("ISBN", "isbn"),
+            ("EAN", "ean"),
+            ("Familia", "familia"),
+            ("Tipo", "tipo"),
+            ("Categoría", "categoria"),
+            ("Categoría raíz", "categoria_raiz"),
+            ("Cuerpo certificado", "cuerpo_certificado"),
+            ("Proveedor", "proveedor"),
+            ("Autor", "autor_nombre"),
+            ("Apellidos autor", "autor_apellidos"),
+            ("Páginas", "total_paginas"),
+            ("Tipo producto", "tipo_producto"),
+            ("Precio", "pvp"),
+            ("Público", "publico"),
+            ("Publicación", "fecha_publicacion"),
+        ]
+        table = {}
+        for item, data in payloads:
+            label = item["label"]
+            if data.get("_error"):
+                table[label] = {k: f"Error: {data['_error']}" for k, _ in rows}
+                continue
+            p = data.get("producto", data)
+            table[label] = {
+                label_name: _safe(p.get(field))
+                for label_name, field in rows
+            }
+        df = pd.DataFrame(table)
+        st.dataframe(df, use_container_width=True)
+        return
+
+    main_payloads = payloads[:2]
+    extra_payloads = payloads[2:]
+    cols = st.columns(2)
+    for idx, (item, data) in enumerate(main_payloads):
+        with cols[idx]:
+            if data.get("_error"):
+                st.error(f"Error cargando detalle: {data['_error']}")
+                continue
+            _render_compare_card_producto(data, item["label"])
+    if extra_payloads:
+        st.markdown("---")
+        st.caption("Más productos añadidos")
+        for item, data in extra_payloads:
+            if data.get("_error"):
+                st.error(f"Error cargando detalle: {data['_error']}")
+                continue
+            _render_compare_card_producto(data, item["label"])
 
 
 def _chunked(items: Sequence[int], size: int = 200) -> Iterable[List[int]]:
@@ -199,18 +396,24 @@ def render_producto_lista(supabase=None):
         "prod_result_count": 0,
         "prod_table_cols": ["catalogo_productoid", "titulo_automatico", "idproducto", "idproductoreferencia", "familia", "tipo", "categoria", "isbn", "ean", "pvp"],
         "prod_compact": st.session_state.get("pref_compact", True),
+        "prod_compare": [],
+        "prod_f_titulo": "",
+        "prod_f_idproducto": "",
+        "prod_f_ref": "",
+        "prod_f_isbn": "",
+        "prod_f_ean": "",
     }
     for k, v in defaults.items():
         st.session_state.setdefault(k, v)
 
     # Catalogos
-    cats = _api_get("/api/productos/catalogos")
+    cats = _api_get_cached("/api/productos/catalogos")
     familias = {c["label"]: c["id"] for c in cats.get("familias", [])}
     tipos = {c["label"]: c["id"] for c in cats.get("tipos", [])}
     categorias = {c["label"]: c["id"] for c in cats.get("categorias", [])}
 
     # Filtros
-    c1, c2 = st.columns([3, 1])
+    c1, c2, c3 = st.columns([3, 1, 1])
     with c1:
         q = st.text_input("Buscar", placeholder="Nombre, referencia, ISBN, EAN...", key="prod_q")
         if st.session_state.get("prod_last_q") != q:
@@ -218,14 +421,42 @@ def render_producto_lista(supabase=None):
             st.session_state["prod_last_q"] = q
     with c2:
         st.metric("Resultados", st.session_state["prod_result_count"])
+    with c3:
+        st.button("Limpiar filtros", on_click=_clear_prod_filters)
 
     with st.expander("Opciones y filtros", expanded=False):
-        f1, f2 = st.columns(2)
+        f1, f2, f3 = st.columns(3)
         with f1:
             st.session_state["prod_view"] = st.radio("Vista", ["Tarjetas", "Tabla"], horizontal=True)
             st.session_state["prod_sort_field"] = st.selectbox("Ordenar por", ["titulo_automatico", "idproducto", "idproductoreferencia", "isbn", "ean", "pvp"])
             st.session_state["prod_sort_dir"] = st.radio("Direccion", ["ASC", "DESC"], horizontal=True)
         with f2:
+            st.session_state["prod_f_titulo"] = st.text_input(
+                "Nombre / título",
+                value=st.session_state.get("prod_f_titulo", ""),
+                on_change=_on_filter_change,
+            )
+            st.session_state["prod_f_idproducto"] = st.text_input(
+                "ID producto",
+                value=st.session_state.get("prod_f_idproducto", ""),
+                on_change=_on_filter_change,
+            )
+            st.session_state["prod_f_ref"] = st.text_input(
+                "Referencia",
+                value=st.session_state.get("prod_f_ref", ""),
+                on_change=_on_filter_change,
+            )
+        with f3:
+            st.session_state["prod_f_isbn"] = st.text_input(
+                "ISBN",
+                value=st.session_state.get("prod_f_isbn", ""),
+                on_change=_on_filter_change,
+            )
+            st.session_state["prod_f_ean"] = st.text_input(
+                "EAN",
+                value=st.session_state.get("prod_f_ean", ""),
+                on_change=_on_filter_change,
+            )
             fam_labels = ["Todas"] + list(familias.keys())
             tipo_labels = ["Todos"] + list(tipos.keys())
             cat_labels = ["Todas"] + list(categorias.keys())
@@ -238,6 +469,22 @@ def render_producto_lista(supabase=None):
             )
             st.session_state["prod_tipo"] = st.selectbox("Tipo", tipo_labels)
             st.session_state["prod_categoria"] = st.selectbox("Categoria", cat_labels)
+
+    st.subheader("Comparar productos (max 3)")
+    compare_items = st.session_state.get("prod_compare", [])
+    if st.session_state.pop("prod_compare_full", False):
+        st.warning("Puedes comparar hasta 3 productos.")
+    if compare_items:
+        for item in compare_items:
+            with st.container(border=True):
+                left, right = st.columns([6, 1])
+                with left:
+                    st.markdown(f"**{item['label']}**")
+                with right:
+                    st.button("Quitar", key=f"prod_cmp_rm_{item['id']}", on_click=_prod_compare_remove, args=(item["id"],))
+        st.button("Limpiar comparativa", key="prod_cmp_clear", on_click=lambda: st.session_state.update({"prod_compare": []}))
+    else:
+        st.caption("Selecciona productos con el botón 🛒 en la lista.")
         if st.session_state["prod_view"] == "Tabla":
             all_cols = [
                 "catalogo_productoid",
@@ -288,7 +535,17 @@ def render_producto_lista(supabase=None):
     if cat_sel and cat_sel != "Todas":
         params["categoriaid"] = categorias.get(cat_sel)
 
-    payload = _api_get("/api/productos", params=params)
+    params.update(
+        {
+            "titulo": st.session_state.get("prod_f_titulo") or None,
+            "idproducto": st.session_state.get("prod_f_idproducto") or None,
+            "idproductoreferencia": st.session_state.get("prod_f_ref") or None,
+            "isbn": st.session_state.get("prod_f_isbn") or None,
+            "ean": st.session_state.get("prod_f_ean") or None,
+        }
+    )
+
+    payload = _api_get_cached("/api/productos", params=params)
     productos: List[Dict[str, Any]] = payload.get("data", [])
     total = payload.get("total", 0)
     total_pages = payload.get("total_pages", 1)
@@ -388,6 +645,9 @@ def _render_card_producto(p: dict):
     if st.button("🔍", key=f"prod_detalle_{pid}"):
         st.session_state["prod_detalle_id"] = pid
         st.rerun()
+    if st.button("🛒", key=f"prod_buy_{pid}"):
+        label = p.get("titulo_automatico") or f"Producto {pid}"
+        _prod_compare_add(pid, label)
     st.markdown("</div></div>", unsafe_allow_html=True)
 
 
@@ -423,6 +683,10 @@ def _render_tabla_productos(productos: list):
             st.session_state["prod_detalle_id"] = label_map[elegido]
             st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
+        if st.button("Comprar", key="prod_sel_buy"):
+            pid = label_map[elegido]
+            label = elegido.split(" - ", 1)[-1] if " - " in elegido else elegido
+            _prod_compare_add(pid, label)
 
 
 def _render_modal_producto(productoid: int, supabase=None):
@@ -454,6 +718,8 @@ def _render_modal_producto(productoid: int, supabase=None):
             st.session_state["prod_detalle_id"] = None
             st.session_state["producto_actual"] = productoid
             st.rerun()
+        if st.button("Agregar a comparar", key=f"prod_cmp_add_{productoid}", use_container_width=True):
+            _prod_compare_add(productoid, titulo)
 
     left, right = st.columns([1, 2])
     with left:
@@ -541,5 +807,7 @@ def _render_modal_producto(productoid: int, supabase=None):
     if st.button("Cerrar detalle", key=f"cerrar_prod_{productoid}", width="stretch"):
         st.session_state["prod_detalle_id"] = None
         st.rerun()
+
+    _render_compare_panel_producto(productoid)
 
 

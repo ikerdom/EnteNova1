@@ -310,13 +310,37 @@ def _render_compare_card(data: dict, title: str):
 
 def _render_compare_panel(main_clienteid: int):
     compare_items = [i for i in st.session_state.get("cli_compare", []) if i["id"] != main_clienteid]
-    if not compare_items:
-        return
     st.markdown("---")
-    st.subheader("Comparativa")
+    st.subheader("Vista comparativa")
+    st.caption("Coloca clientes a la izquierda y derecha para verlos a la vez.")
+    search_col, add_col = st.columns([3, 1])
+    with search_col:
+        q_cmp = st.text_input("Buscar cliente para comparar", key=f"cmp_q_{main_clienteid}")
+    with add_col:
+        st.markdown(" ")
+        st.markdown(" ")
+        add_clicked = st.button("Buscar", key=f"cmp_search_{main_clienteid}")
+
+    options = []
+    if q_cmp and add_clicked:
+        payload = _api_get_cached("/api/clientes", params={"q": q_cmp, "page": 1, "page_size": 10})
+        for c in payload.get("data", []):
+            label = c.get("razonsocial") or c.get("nombre") or f"Cliente {c.get('clienteid')}"
+            options.append((f"{label} · {c.get('cifdni') or '-'}", c.get("clienteid")))
+    if options:
+        label_map = {label: cid for label, cid in options}
+        elegido = st.selectbox("Resultados", options=list(label_map.keys()), key=f"cmp_pick_{main_clienteid}")
+        if st.button("Añadir a comparar", key=f"cmp_add_{main_clienteid}"):
+            cid = label_map[elegido]
+            label = elegido.split(" · ")[0]
+            _compare_add(cid, label, "")
+
+    if not compare_items:
+        st.info("No hay clientes añadidos para comparar. Usa el botón 🛒 o la búsqueda arriba.")
+        return
     layout = st.radio(
         "Diseño",
-        ["Tabla", "Tarjetas"],
+        ["Izquierda/Derecha", "Tabla"],
         horizontal=True,
         key=f"cmp_layout_{main_clienteid}",
     )
@@ -356,10 +380,20 @@ def _render_compare_panel(main_clienteid: int):
         st.dataframe(df, use_container_width=True)
         return
 
-    cols_count = 2 if len(payloads) <= 2 else 3
-    cols = st.columns(cols_count)
-    for idx, (item, data) in enumerate(payloads):
-        with cols[idx % cols_count]:
+    # Izquierda/Derecha: máximo 2 columnas visibles, el resto apilado abajo
+    main_payloads = payloads[:2]
+    extra_payloads = payloads[2:]
+    cols = st.columns(2)
+    for idx, (item, data) in enumerate(main_payloads):
+        with cols[idx]:
+            if data.get("_error"):
+                st.error(f"Error cargando detalle: {data['_error']}")
+                continue
+            _render_compare_card(data, item["label"])
+    if extra_payloads:
+        st.markdown("---")
+        st.caption("Más clientes añadidos")
+        for item, data in extra_payloads:
             if data.get("_error"):
                 st.error(f"Error cargando detalle: {data['_error']}")
                 continue

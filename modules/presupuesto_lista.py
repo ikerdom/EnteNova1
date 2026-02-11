@@ -82,6 +82,43 @@ def _render_filter_chips(items):
     st.markdown(chips, unsafe_allow_html=True)
 
 
+def _render_filter_buttons(items):
+    active = [(k, v, fn) for k, v, fn in items if v]
+    if not active:
+        return
+    cols = st.columns(min(4, len(active)))
+    for i, (label, value, fn) in enumerate(active):
+        col = cols[i % len(cols)]
+        if col.button(f"✕ {label}: {value}", key=f"pres_chip_{i}_{label}"):
+            fn()
+            st.rerun()
+
+
+def _clear_pres_filters():
+    st.session_state["pres_q"] = ""
+    st.session_state["pres_estado"] = "Todos"
+    st.session_state["pres_cliente_filtro"] = "Todos"
+    st.session_state["pres_ambito"] = "Todos"
+    st.session_state["pres_from"] = None
+    st.session_state["pres_to"] = None
+    st.session_state["pres_total_min"] = None
+    st.session_state["pres_total_max"] = None
+    st.session_state["pres_seccion"] = ""
+    st.session_state["pres_seccion_id"] = None
+    st.session_state["pres_only_with_lines"] = False
+    st.session_state["pres_page"] = 1
+
+
+@st.cache_data(ttl=60)
+def _api_get_cached(path: str, params: Optional[dict] = None) -> dict:
+    try:
+        r = requests.get(f"{_base_url()}{path}", params=params, timeout=20)
+        r.raise_for_status()
+        return r.json()
+    except Exception:
+        return {}
+
+
 def _estado_bucket(label: str):
     v = (label or "").lower()
     if any(k in v for k in ["acept", "convert"]):
@@ -553,6 +590,13 @@ def render_presupuesto_lista(api_base: Optional[str] = None):
         "pres_cliente_filtro": "Todos",
         "pres_only_with_lines": False,
         "pres_orden": "Últimos creados",
+        "pres_ambito": "Todos",
+        "pres_from": None,
+        "pres_to": None,
+        "pres_total_min": None,
+        "pres_total_max": None,
+        "pres_seccion": "",
+        "pres_seccion_id": None,
         "pres_result_count": 0,
         "pres_last_fingerprint": None,
         "pres_compact": st.session_state.get("pref_compact", True),
@@ -590,6 +634,19 @@ def render_presupuesto_lista(api_base: Optional[str] = None):
 
         _render_estado_quick_filters(list(estados_map.values()))
 
+        top = _api_get_cached("/api/presupuestos/top-clientes", params={"limit": 5})
+        top_items = top.get("data") or []
+        if top_items:
+            st.subheader("Top 5 clientes con más presupuestos")
+            cols_top = st.columns(min(5, len(top_items)))
+            for i, it in enumerate(top_items):
+                label = it.get("label") or f"Cliente {it.get('clienteid')}"
+                count = it.get("count") or 0
+                if cols_top[i % len(cols_top)].button(f"{label} · {count}", key=f"pres_top_{it.get('clienteid')}"):
+                    st.session_state["pres_cliente_filtro"] = label if label in clientes_map else "Todos"
+                    st.session_state["pres_page"] = 1
+                    st.rerun()
+
         with st.expander("Filtros avanzados", expanded=False):
             f1, f2, f3, f4 = st.columns(4)
             with f1:
@@ -617,26 +674,54 @@ def render_presupuesto_lista(api_base: Optional[str] = None):
                     key="pres_ambito",
                 )
 
-            f5, f6, f7 = st.columns([1, 1, 1])
+            f5, f6, f7 = st.columns(3)
             with f5:
+                st.date_input("Desde", value=st.session_state.get("pres_from"), key="pres_from")
+            with f6:
+                st.date_input("Hasta", value=st.session_state.get("pres_to"), key="pres_to")
+            with f7:
+                st.text_input("Sección (texto)", key="pres_seccion")
+
+            f8, f9, f10 = st.columns([1, 1, 1])
+            with f8:
                 st.radio(
                     "Vista",
                     ["Tarjetas", "Tabla"],
                     horizontal=True,
                     key="pres_view",
                 )
-            with f6:
+            with f9:
                 st.checkbox("Solo con lineas", key="pres_only_with_lines")
-            with f7:
-                if st.button("Nuevo presupuesto", use_container_width=True):
-                    st.session_state["show_creator"] = True
-                    st.rerun()
+            with f10:
+                st.button("Limpiar filtros", on_click=_clear_pres_filters, use_container_width=True)
 
-        _render_filter_chips([
-            ("Estado", None if estado_sel == "Todos" else estado_sel),
-            ("Cliente", None if cliente_filtro == "Todos" else cliente_filtro),
-            ("Ambito", None if ambito_sel == "Todos" else ambito_sel),
-            ("Buscar", (q or "").strip() or None),
+            f11, f12, f13 = st.columns(3)
+            with f11:
+                total_min_val = float(st.session_state.get("pres_total_min") or 0.0)
+                st.number_input("Total mínimo", min_value=0.0, value=total_min_val, step=1.0, key="pres_total_min")
+            with f12:
+                total_max_val = float(st.session_state.get("pres_total_max") or 0.0)
+                st.number_input("Total máximo", min_value=0.0, value=total_max_val, step=1.0, key="pres_total_max")
+            with f13:
+                st.number_input("Sección ID", min_value=0, value=0, step=1, key="pres_seccion_id")
+
+        pres_from = st.session_state.get("pres_from")
+        pres_to = st.session_state.get("pres_to")
+        total_min = st.session_state.get("pres_total_min")
+        total_max = st.session_state.get("pres_total_max")
+        seccion_txt = st.session_state.get("pres_seccion")
+        seccion_id_val = st.session_state.get("pres_seccion_id")
+        _render_filter_buttons([
+            ("Estado", None if estado_sel == "Todos" else estado_sel, lambda: st.session_state.update({"pres_estado": "Todos"})),
+            ("Cliente", None if cliente_filtro == "Todos" else cliente_filtro, lambda: st.session_state.update({"pres_cliente_filtro": "Todos"})),
+            ("Ambito", None if ambito_sel == "Todos" else ambito_sel, lambda: st.session_state.update({"pres_ambito": "Todos"})),
+            ("Desde", pres_from.isoformat() if pres_from else None, lambda: st.session_state.update({"pres_from": None})),
+            ("Hasta", pres_to.isoformat() if pres_to else None, lambda: st.session_state.update({"pres_to": None})),
+            ("Sección", seccion_txt or None, lambda: st.session_state.update({"pres_seccion": ""})),
+            ("Sección ID", str(seccion_id_val) if seccion_id_val else None, lambda: st.session_state.update({"pres_seccion_id": None})),
+            ("Total ≥", f"{float(total_min):.2f}" if total_min else None, lambda: st.session_state.update({"pres_total_min": None})),
+            ("Total ≤", f"{float(total_max):.2f}" if total_max else None, lambda: st.session_state.update({"pres_total_max": None})),
+            ("Buscar", (q or "").strip() or None, lambda: st.session_state.update({"pres_q": ""})),
         ])
 
         fingerprint = (
@@ -644,6 +729,12 @@ def render_presupuesto_lista(api_base: Optional[str] = None):
             estado_sel,
             cliente_filtro,
             ambito_sel,
+            st.session_state.get("pres_from"),
+            st.session_state.get("pres_to"),
+            st.session_state.get("pres_total_min"),
+            st.session_state.get("pres_total_max"),
+            st.session_state.get("pres_seccion"),
+            st.session_state.get("pres_seccion_id"),
             orden_sel,
             st.session_state.get("pres_view"),
         )
@@ -667,6 +758,12 @@ def render_presupuesto_lista(api_base: Optional[str] = None):
                 "page_size": per_page,
                 "ordenar_por": "fecha_presupuesto" if orden_sel == "Fecha de presupuesto" else "creado_en",
                 "ambito_impuesto": None if ambito_sel == "Todos" else ambito_sel,
+                "fecha_desde": st.session_state.get("pres_from").isoformat() if st.session_state.get("pres_from") else None,
+                "fecha_hasta": st.session_state.get("pres_to").isoformat() if st.session_state.get("pres_to") else None,
+                "seccion": st.session_state.get("pres_seccion") or None,
+                "seccion_id": int(st.session_state.get("pres_seccion_id")) if st.session_state.get("pres_seccion_id") else None,
+                "total_min": float(st.session_state.get("pres_total_min")) if st.session_state.get("pres_total_min") else None,
+                "total_max": float(st.session_state.get("pres_total_max")) if st.session_state.get("pres_total_max") else None,
             }
             if estado_sel != "Todos":
                 params["estadoid"] = next((k for k, v in estados_map.items() if v == estado_sel), None)
