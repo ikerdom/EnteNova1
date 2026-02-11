@@ -164,7 +164,7 @@ def _api_base() -> str:
 
 
 
-def _api_get(path: str, params: Optional[dict] = None) -> dict:
+def _api_get(path: str, params: Optional[dict] = None, show_error: bool = True) -> dict:
 
 
     try:
@@ -182,10 +182,188 @@ def _api_get(path: str, params: Optional[dict] = None) -> dict:
     except Exception as e:
 
 
-        st.error(f"Error llamando a API: {e}")
+        if show_error:
+            st.error(f"Error llamando a API: {e}")
 
 
         return {}
+
+
+@st.cache_data(ttl=60)
+def _api_get_cached(path: str, params: Optional[dict] = None) -> dict:
+    return _api_get(path, params=params, show_error=False)
+
+
+def _clear_filters():
+    st.session_state["cli_q"] = ""
+    st.session_state["cli_grupo_filtro"] = "Todos"
+    st.session_state["cli_page"] = 1
+    st.session_state["cli_f_razon"] = ""
+    st.session_state["cli_f_nombre"] = ""
+    st.session_state["cli_f_cif"] = ""
+    st.session_state["cli_f_codcta"] = ""
+    st.session_state["cli_f_codcp"] = ""
+
+
+def _compare_add(cid: Any, label: str, cif: str):
+    items = st.session_state.setdefault("cli_compare", [])
+    if any(i["id"] == cid for i in items):
+        return
+    if len(items) >= 3:
+        st.session_state["cli_compare_full"] = True
+        return
+    items.append({"id": cid, "label": label, "cif": cif})
+    st.session_state["cli_compare"] = items
+
+
+def _compare_remove(cid: Any):
+    items = st.session_state.get("cli_compare", [])
+    st.session_state["cli_compare"] = [i for i in items if i["id"] != cid]
+
+
+def _on_filter_change():
+    st.session_state["cli_page"] = 1
+
+
+@st.cache_data(ttl=120)
+def _fetch_cliente_detalle_cached(clienteid: int) -> dict:
+    base = _api_base()
+    try:
+        res = requests.get(f"{base}/api/clientes/{clienteid}", timeout=15)
+        res.raise_for_status()
+        return res.json()
+    except Exception as e:
+        return {"_error": str(e)}
+
+
+def _fetch_cliente_detalle(clienteid: int) -> dict:
+    return _fetch_cliente_detalle_cached(clienteid)
+
+
+def _render_compact_cliente(clienteid: int, label: str):
+    data = _fetch_cliente_detalle(clienteid)
+    if data.get("_error"):
+        st.error(f"Error cargando detalle: {data['_error']}")
+        return
+    cli = data.get("cliente", {})
+    tipo = cli.get("clienteoproveedor") or "-"
+    grupo = cli.get("idgrupo") or "-"
+    razon = cli.get("razonsocial") or cli.get("nombre") or label
+    with st.container(border=True):
+        top_l, top_r = st.columns([3, 1])
+        with top_l:
+            st.markdown(f"### {razon}")
+        with top_r:
+            st.markdown(
+                f"""<div style="text-align:right;">
+<span style="display:inline-block;padding:4px 10px;border-radius:999px;background:#e2e8f0;color:#0f172a;font-size:0.82rem;font-weight:600;">{tipo}</span><br>
+<span style="display:inline-block;margin-top:6px;padding:4px 10px;border-radius:999px;background:#ecfdf5;color:#166534;font-size:0.82rem;font-weight:600;">Grupo {grupo}</span>
+</div>""",
+                unsafe_allow_html=True,
+            )
+        kpi1, kpi2, kpi3 = st.columns(3)
+        kpi1.metric("CIF/DNI", cli.get("cifdni") or "-")
+        kpi2.metric("Cuenta", cli.get("codigocuenta") or "-")
+        kpi3.metric("Código C/P", cli.get("codigoclienteoproveedor") or "-")
+
+
+def _render_compare_card(data: dict, title: str):
+    cli = data.get("cliente", {})
+    tipo = cli.get("clienteoproveedor") or "-"
+    grupo = cli.get("idgrupo") or "-"
+    razon = cli.get("razonsocial") or cli.get("nombre") or title
+    with st.container(border=True):
+        top_l, top_r = st.columns([3, 1])
+        with top_l:
+            st.markdown(f"### {razon}")
+            st.caption(title)
+        with top_r:
+            st.markdown(
+                f"""<div style="text-align:right;">
+<span style="display:inline-block;padding:4px 10px;border-radius:999px;background:#e2e8f0;color:#0f172a;font-size:0.82rem;font-weight:600;">{tipo}</span><br>
+<span style="display:inline-block;margin-top:6px;padding:4px 10px;border-radius:999px;background:#ecfdf5;color:#166534;font-size:0.82rem;font-weight:600;">Grupo {grupo}</span>
+</div>""",
+                unsafe_allow_html=True,
+            )
+        kpi1, kpi2, kpi3 = st.columns(3)
+        kpi1.metric("CIF/DNI", cli.get("cifdni") or "-")
+        kpi2.metric("Cuenta", cli.get("codigocuenta") or "-")
+        kpi3.metric("Código C/P", cli.get("codigoclienteoproveedor") or "-")
+        left, right = st.columns(2)
+        with left:
+            _render_kv_block(
+                [
+                    ("Razón social", cli.get("razonsocial") or cli.get("nombre")),
+                    ("Nombre comercial", cli.get("nombre")),
+                    ("Email", cli.get("email") or cli.get("correoelectronico")),
+                ]
+            )
+        with right:
+            _render_kv_block(
+                [
+                    ("Teléfono", cli.get("telefono") or cli.get("movil")),
+                    ("Provincia", cli.get("provincia") or cli.get("idprovincia")),
+                    ("Municipio", cli.get("municipio") or cli.get("idmunicipio")),
+                ]
+            )
+
+
+def _render_compare_panel(main_clienteid: int):
+    compare_items = [i for i in st.session_state.get("cli_compare", []) if i["id"] != main_clienteid]
+    if not compare_items:
+        return
+    st.markdown("---")
+    st.subheader("Comparativa")
+    layout = st.radio(
+        "Diseño",
+        ["Tabla", "Tarjetas"],
+        horizontal=True,
+        key=f"cmp_layout_{main_clienteid}",
+    )
+    entries = [{"id": main_clienteid, "label": "Cliente actual"}] + compare_items
+    payloads = []
+    for item in entries:
+        data = _fetch_cliente_detalle(int(item["id"]))
+        payloads.append((item, data))
+
+    if layout == "Tabla":
+        rows = [
+            ("Razón social", "razonsocial"),
+            ("Nombre", "nombre"),
+            ("CIF/DNI", "cifdni"),
+            ("Cuenta", "codigocuenta"),
+            ("Código C/P", "codigoclienteoproveedor"),
+            ("Tipo", "clienteoproveedor"),
+            ("Grupo", "idgrupo"),
+            ("Email", "email"),
+            ("Teléfono", "telefono"),
+            ("Móvil", "movil"),
+            ("Provincia", "provincia"),
+            ("Municipio", "municipio"),
+        ]
+        table = {}
+        for item, data in payloads:
+            label = item["label"]
+            if data.get("_error"):
+                table[label] = {k: f"Error: {data['_error']}" for k, _ in rows}
+                continue
+            cli = data.get("cliente", {})
+            table[label] = {
+                label_name: _safe(cli.get(field))
+                for label_name, field in rows
+            }
+        df = pd.DataFrame(table)
+        st.dataframe(df, use_container_width=True)
+        return
+
+    cols_count = 2 if len(payloads) <= 2 else 3
+    cols = st.columns(cols_count)
+    for idx, (item, data) in enumerate(payloads):
+        with cols[idx % cols_count]:
+            if data.get("_error"):
+                st.error(f"Error cargando detalle: {data['_error']}")
+                continue
+            _render_compare_card(data, item["label"])
 
 
 
@@ -225,11 +403,18 @@ def render_cliente_lista(API_URL: str):
         "cli_table_cols": ["razonsocial", "nombre", "cifdni"],
         "cli_page_size": 30,
         "cli_compact": st.session_state.get("pref_compact", True),
+        "cli_grupo_filtro": "Todos",
+        "cli_compare": [],
+        "cli_f_razon": "",
+        "cli_f_nombre": "",
+        "cli_f_cif": "",
+        "cli_f_codcta": "",
+        "cli_f_codcp": "",
     }
     for k, v in defaults.items():
         st.session_state.setdefault(k, v)
 
-    cli_catalogos = _api_get("/api/clientes/catalogos")
+    cli_catalogos = _api_get_cached("/api/clientes/catalogos")
     grupos = {c["label"]: c["id"] for c in cli_catalogos.get("grupos", [])}
 
     c1, c2, c3, c4, c5 = st.columns([3, 1.2, 1, 1, 1])
@@ -257,12 +442,7 @@ def render_cliente_lista(API_URL: str):
     with c4:
         st.metric("Resultados", st.session_state["cli_result_count"])
     with c5:
-        if st.button("Limpiar filtros"):
-            st.session_state["cli_q"] = ""
-            st.session_state["cli_tipo_filtro"] = "Todos"
-            st.session_state["cli_grupo_filtro"] = "Todos"
-            st.session_state["cli_page"] = 1
-            st.rerun()
+        st.button("Limpiar filtros", on_click=_clear_filters)
 
     st.markdown("---")
 
@@ -272,44 +452,64 @@ def render_cliente_lista(API_URL: str):
         st.markdown("---")
         st.subheader("Catálogo de clientes")
 
-    # Filtros rápidos
-    quick1, quick2, quick3, quick4 = st.columns(4)
-    with quick1:
-        if st.button("Todos", use_container_width=True):
-            st.session_state["cli_tipo_filtro"] = "Todos"
-            st.session_state["cli_page"] = 1
-            st.rerun()
-    with quick2:
-        if st.button("Clientes", use_container_width=True):
-            st.session_state["cli_tipo_filtro"] = "CLIENTE"
-            st.session_state["cli_page"] = 1
-            st.rerun()
-    with quick3:
-        if st.button("Proveedores", use_container_width=True):
-            st.session_state["cli_tipo_filtro"] = "PROVEEDOR"
-            st.session_state["cli_page"] = 1
-            st.rerun()
-    with quick4:
-        if st.button("Ambos", use_container_width=True):
-            st.session_state["cli_tipo_filtro"] = "AMBOS"
-            st.session_state["cli_page"] = 1
-            st.rerun()
+    st.subheader("Comprar clientes (max 3)")
+    compare_items = st.session_state.get("cli_compare", [])
+    if st.session_state.pop("cli_compare_full", False):
+        st.warning("Puedes comparar hasta 3 clientes.")
+    if compare_items:
+        for item in compare_items:
+            with st.container(border=True):
+                left, right = st.columns([6, 1])
+                with left:
+                    st.markdown(f"**{item['label']}**")
+                    if item.get("cif"):
+                        st.caption(f"CIF/DNI: {item['cif']}")
+                with right:
+                    st.button("Quitar", key=f"cmp_rm_{item['id']}", on_click=_compare_remove, args=(item["id"],))
+        st.button("Limpiar compra", key="cmp_clear", on_click=lambda: st.session_state.update({"cli_compare": []}))
+    else:
+        st.caption("Selecciona clientes con el botón Comprar en la lista.")
 
     with st.expander("Filtros avanzados", expanded=False):
         f1, f2, f3 = st.columns(3)
         with f1:
-            st.session_state["cli_tipo_filtro"] = st.selectbox(
-                "Tipo cliente/proveedor",
-                ["Todos", "CLIENTE", "PROVEEDOR", "AMBOS"],
-            )
-        with f2:
             grupo_labels = ["Todos"] + list(grupos.keys())
             st.session_state["cli_grupo_filtro"] = st.selectbox("Grupo", grupo_labels)
+        with f2:
+            st.session_state["cli_f_razon"] = st.text_input(
+                "Razón social",
+                value=st.session_state.get("cli_f_razon", ""),
+                on_change=_on_filter_change,
+            )
+            st.session_state["cli_f_nombre"] = st.text_input(
+                "Nombre",
+                value=st.session_state.get("cli_f_nombre", ""),
+                on_change=_on_filter_change,
+            )
         with f3:
+            st.session_state["cli_f_cif"] = st.text_input(
+                "CIF/DNI",
+                value=st.session_state.get("cli_f_cif", ""),
+                on_change=_on_filter_change,
+            )
+            st.session_state["cli_f_codcta"] = st.text_input(
+                "Código cuenta",
+                value=st.session_state.get("cli_f_codcta", ""),
+                on_change=_on_filter_change,
+            )
+            st.session_state["cli_f_codcp"] = st.text_input(
+                "Código cliente",
+                value=st.session_state.get("cli_f_codcp", ""),
+                on_change=_on_filter_change,
+            )
+
+        f4, f5 = st.columns(2)
+        with f4:
             st.session_state["cli_sort_field"] = st.selectbox(
                 "Ordenar por",
                 ["razonsocial", "nombre", "cifdni", "codigocuenta", "codigoclienteoproveedor"],
             )
+        with f5:
             st.session_state["cli_sort_dir"] = st.radio(
                 "Direccion",
                 ["ASC", "DESC"],
@@ -348,20 +548,22 @@ def render_cliente_lista(API_URL: str):
 
     params = {
         "q": q or None,
+        "razonsocial": st.session_state.get("cli_f_razon") or None,
+        "nombre": st.session_state.get("cli_f_nombre") or None,
+        "cifdni": st.session_state.get("cli_f_cif") or None,
+        "codigocuenta": st.session_state.get("cli_f_codcta") or None,
+        "codigoclienteoproveedor": st.session_state.get("cli_f_codcp") or None,
         "page": page,
         "page_size": page_size,
         "sort_field": st.session_state["cli_sort_field"],
         "sort_dir": st.session_state["cli_sort_dir"],
     }
 
-    tipo_filtro = st.session_state.get("cli_tipo_filtro", "Todos")
-    if tipo_filtro != "Todos":
-        params["tipo"] = tipo_filtro
     grupo_filtro = st.session_state.get("cli_grupo_filtro", "Todos")
     if grupo_filtro != "Todos":
         params["idgrupo"] = grupos.get(grupo_filtro)
 
-    payload = _api_get("/api/clientes", params=params)
+    payload = _api_get_cached("/api/clientes", params=params)
     clientes: List[Dict[str, Any]] = payload.get("data", [])
     total = payload.get("total", 0)
     total_pages = payload.get("total_pages", 1)
@@ -405,6 +607,11 @@ def render_cliente_lista(API_URL: str):
                 st.session_state["cliente_detalle_id"] = label_map[elegido]
                 st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
+            if st.button("Comprar", key="cli_table_buy"):
+                cid = label_map[elegido]
+                label = elegido
+                cif = next((c.get("cifdni") for c in clientes if c.get("clienteid") == cid), "")
+                _compare_add(cid, label, _safe(cif, ""))
     else:
         cols = st.columns(3)
         for i, c in enumerate(clientes):
@@ -473,6 +680,10 @@ def _render_card(c: Dict[str, Any]):
     if st.button("🔍", key=f"cli_detalle_{cid}"):
         st.session_state["cliente_detalle_id"] = cid
         st.rerun()
+    if st.button("🛒", key=f"cli_buy_{cid}"):
+        label = c.get("razonsocial") or c.get("nombre") or "Cliente"
+        cif = c.get("cifdni") or ""
+        _compare_add(cid, label, _safe(cif, ""))
     st.markdown("</div></div>", unsafe_allow_html=True)
 
 
@@ -489,6 +700,9 @@ def _render_detalle_panel(clienteid: int):
             st.session_state["cli_show_form"] = "cliente"
             st.session_state["cliente_actual"] = clienteid
             st.rerun()
+        if st.button("Agregar a comparar", key=f"cli_cmp_add_{clienteid}", use_container_width=True):
+            label = f"Cliente {clienteid}"
+            _compare_add(clienteid, label, "")
     with top3:
         if st.button("Cerrar detalle", key=f"cerrar_cli_top_{clienteid}", use_container_width=True):
             st.session_state["cliente_detalle_id"] = None
@@ -499,13 +713,9 @@ def _render_detalle_panel(clienteid: int):
         with c1:
             st.subheader(f"Detalle cliente {clienteid}")
 
-        base = _api_base()
-        try:
-            res = requests.get(f"{base}/api/clientes/{clienteid}", timeout=15)
-            res.raise_for_status()
-            data = res.json()
-        except Exception as e:
-            st.error(f"Error cargando detalle: {e}")
+        data = _fetch_cliente_detalle(clienteid)
+        if data.get("_error"):
+            st.error(f"Error cargando detalle: {data['_error']}")
             if st.button("Cerrar", key=f"cerrar_cli_err_{clienteid}"):
                 st.session_state["cliente_detalle_id"] = None
                 st.rerun()
@@ -603,6 +813,8 @@ def _render_detalle_panel(clienteid: int):
             render_crm_form(int(clienteid))
         with tabs[9]:
             st.info("Historial disponible en próxima fase (modo API).")
+
+    _render_compare_panel(clienteid)
 
 
 
