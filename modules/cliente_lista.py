@@ -214,6 +214,9 @@ def _compare_add(cid: Any, label: str, cif: str):
         return
     items.append({"id": cid, "label": label, "cif": cif})
     st.session_state["cli_compare"] = items
+    if len(items) >= 2 and not st.session_state.get("cliente_detalle_id"):
+        st.session_state["cliente_detalle_id"] = cid
+        st.rerun()
 
 
 def _compare_remove(cid: Any):
@@ -336,7 +339,7 @@ def _render_compare_panel(main_clienteid: int):
             _compare_add(cid, label, "")
 
     if not compare_items:
-        st.info("No hay clientes añadidos para comparar. Usa el botón 🛒 o la búsqueda arriba.")
+        st.info("No hay clientes añadidos para comparar. Usa el botón Comparar o la búsqueda arriba.")
         return
     layout = st.radio(
         "Diseño",
@@ -735,9 +738,6 @@ def _render_card(c: Dict[str, Any]):
     )
 
     cid = c.get("clienteid")
-    contact_line = _safe(c.get("telefono") or c.get("movil"), "")
-    if contact_line:
-        st.caption(f"Contacto: {contact_line}")
     _, action_col = st.columns([5, 1])
     with action_col:
         with st.popover("⋯", use_container_width=True):

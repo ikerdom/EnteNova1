@@ -18,15 +18,15 @@ def apply_orbe_theme():
     @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap');
 
     :root {
-        --bg-1: #f8fafc;
-        --bg-2: #e9f2f7;
-        --ink-1: #0b2c3d;
-        --ink-2: #123b4f;
-        --accent: #2563eb;
-        --accent-2: #1d4ed8;
-        --accent-warm: #60a5fa;
+        --bg-1: #f6faff;
+        --bg-2: #eaf4ff;
+        --ink-1: #0f2b46;
+        --ink-2: #123553;
+        --accent: #7cbcff;
+        --accent-2: #b4d9ff;
+        --accent-warm: #dcecff;
         --card: #ffffff;
-        --border: #cfe2ee;
+        --border: #dbe9f6;
         --shadow: 0 12px 28px rgba(12, 38, 55, 0.10);
         --radius: 16px;
     }
@@ -112,8 +112,8 @@ def apply_orbe_theme():
         justify-content: center !important;
         gap: 0.45rem !important;
 
-        background: linear-gradient(135deg, var(--accent), var(--accent-2)) !important;
-        color: #ffffff !important;
+        background: linear-gradient(135deg, #e6f2ff, #f7fbff) !important;
+        color: #1e3a8a !important;
         border: none !important;
         border-radius: 14px !important;
 
@@ -129,14 +129,14 @@ def apply_orbe_theme():
         white-space: nowrap !important;
         line-height: 1 !important;
         overflow: hidden !important;
-        box-shadow: 0 8px 18px rgba(232, 93, 63, 0.20) !important;
+        box-shadow: 0 8px 18px rgba(30, 58, 138, 0.12) !important;
         transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease !important;
     }
 
     div.stButton > button:hover {
         filter: saturate(1.05) !important;
         transform: translateY(-1px) !important;
-        box-shadow: 0 10px 24px rgba(232, 93, 63, 0.26) !important;
+        box-shadow: 0 10px 24px rgba(30, 58, 138, 0.16) !important;
     }
 
     .small-icon-btn, button[title][aria-label] {
@@ -169,8 +169,8 @@ def apply_orbe_theme():
         justify-content: center !important;
         gap: 0.45rem !important;
 
-        background: linear-gradient(135deg, var(--accent), var(--accent-2)) !important;
-        color: #ffffff !important;
+        background: linear-gradient(135deg, #e6f2ff, #f7fbff) !important;
+        color: #1e3a8a !important;
         border: none !important;
         border-radius: 12px !important;
 
@@ -182,7 +182,7 @@ def apply_orbe_theme():
 
         width: 100% !important;
         min-height: 2.9rem !important;
-        box-shadow: 0 8px 16px rgba(232, 93, 63, 0.20) !important;
+        box-shadow: 0 8px 16px rgba(30, 58, 138, 0.12) !important;
     }
 
     [data-testid="stSidebar"] div.stButton > button:hover {

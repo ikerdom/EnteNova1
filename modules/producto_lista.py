@@ -114,6 +114,9 @@ def _prod_compare_add(pid: Any, label: str):
     items.append({"id": pid, "label": label})
     st.session_state["prod_compare"] = items
     st.session_state["prod_compare_last"] = label
+    if len(items) >= 2 and not st.session_state.get("prod_detalle_id"):
+        st.session_state["prod_detalle_id"] = pid
+        st.rerun()
 
 
 def _prod_compare_remove(pid: Any):
@@ -208,7 +211,7 @@ def _render_compare_panel_producto(main_productoid: int):
             _prod_compare_add(pid, label)
 
     if not compare_items:
-        st.info("No hay productos añadidos para comparar. Usa el botón 🛒 o la búsqueda arriba.")
+        st.info("No hay productos añadidos para comparar. Usa el botón Comparar o la búsqueda arriba.")
         return
 
     layout = st.radio(
@@ -339,8 +342,26 @@ def _load_albaran_lineas_for_producto(supa, product_id: int, albaran_ids: List[i
             except Exception as e:
                 st.warning(f"No se pudieron cargar líneas de albarán: {e}")
                 return rows
-        rows.extend(res.data or [])
+    rows.extend(res.data or [])
     return rows
+
+
+def _load_pedido_lineas_for_producto(supa, product_id: int, since: date) -> List[dict]:
+    q = (
+        supa.table("pedido_linea")
+        .select("pedido_id, cantidad, subtotal, precio, descuento_pct, producto_id, producto_ref_origen, created_at")
+        .gte("created_at", str(since))
+    )
+    try:
+        q = q.or_(f"producto_id.eq.{product_id},producto_ref_origen.eq.{product_id}")
+        res = q.execute()
+    except Exception:
+        try:
+            res = q.eq("producto_id", product_id).execute()
+        except Exception as e:
+            st.warning(f"No se pudieron cargar líneas de pedidos: {e}")
+            return []
+    return res.data or []
 
 
 # ======================================================
@@ -699,7 +720,7 @@ def _render_tabla_productos(productos: list):
             st.session_state["prod_detalle_id"] = label_map[elegido]
             st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
-        if st.button("Comparar", key="prod_sel_buy"):
+        if st.button("Comparar", key="prod_sel_cmp"):
             pid = label_map[elegido]
             label = elegido.split(" - ", 1)[-1] if " - " in elegido else elegido
             _prod_compare_add(pid, label)
@@ -762,7 +783,7 @@ def _render_modal_producto(productoid: int, supabase=None):
         st.markdown("**Descripción**")
         st.write(p.get("descripcion") or "Sin descripción.")
 
-    st.markdown("### Ventas en albaranes")
+    st.markdown("### Ventas en pedidos")
     if not supabase:
         st.info("Conecta Supabase para ver métricas de ventas.")
     else:
@@ -780,40 +801,25 @@ def _render_modal_producto(productoid: int, supabase=None):
             or _as_int(p.get("catalogo_productoid"))
         )
         if not pid:
-            st.info("No se encontró un ID de producto válido para cruzar albaranes.")
+            st.info("No se encontró un ID de producto válido para cruzar pedidos.")
         else:
-            alb_ids = _load_albaran_ids_since(supabase, since)
-            fecha_map = _load_albaran_fecha_map(supabase, since)
-            lineas = _load_albaran_lineas_for_producto(supabase, pid, alb_ids)
+            lineas = _load_pedido_lineas_for_producto(supabase, pid, since)
             total_qty = sum(float(r.get("cantidad") or 0) for r in lineas)
-            total_imp = sum(float(r.get("subtotal") or 0) for r in lineas)
-            total_alb = len({r.get("albaran_id") for r in lineas if r.get("albaran_id")})
+            total_imp = 0.0
+            for r in lineas:
+                subtotal = r.get("subtotal")
+                if subtotal is not None:
+                    total_imp += float(subtotal or 0)
+                else:
+                    qty = float(r.get("cantidad") or 0)
+                    precio = r.get("precio") or 0
+                    total_imp += float(precio) * qty
+            total_ped = len({r.get("pedido_id") for r in lineas if r.get("pedido_id")})
             m1, m2, m3 = st.columns(3)
-            m1.metric("Líneas", len(lineas))
-            m2.metric("Albaranes", total_alb)
-            m3.metric("Unidades", f"{total_qty:,.0f}".replace(",", "."))
-            st.caption(f"Importe total (subtotal): {total_imp:,.2f} EUR desde {since.isoformat()}")
-
-            if lineas and fecha_map:
-                st.markdown("#### Evolución mensual")
-                by_month: Dict[str, float] = {}
-                for r in lineas:
-                    alb_id = r.get("albaran_id")
-                    fecha = fecha_map.get(int(alb_id)) if alb_id else None
-                    if not fecha:
-                        continue
-                    month = fecha[:7]
-                    by_month[month] = by_month.get(month, 0.0) + float(r.get("cantidad") or 0)
-
-                months = sorted(by_month.keys())
-                data = [{"Mes": m, "Unidades": by_month[m]} for m in months]
-                try:
-                    import pandas as pd
-
-                    df = pd.DataFrame(data).set_index("Mes")
-                    st.line_chart(df, height=220)
-                except Exception:
-                    st.table(data)
+            m1.metric("Pedidos", total_ped)
+            m2.metric("Unidades", f"{total_qty:,.0f}".replace(",", "."))
+            m3.metric("Importe", f"{total_imp:,.2f} EUR".replace(",", "."))
+            st.caption(f"Totales desde {since.isoformat()}")
 
     if st.button("Cerrar detalle", key=f"cerrar_prod_{productoid}", width="stretch"):
         st.session_state["prod_detalle_id"] = None

@@ -5,7 +5,8 @@ import pandas as pd
 from datetime import datetime, timedelta, date
 import requests
 
-from modules.orbe_palette import PRIMARY, SUCCESS, WARNING, DANGER, SECONDARY
+from modules.orbe_palette import PRIMARY, PRIMARY_DARK, SUCCESS, WARNING, DANGER, SECONDARY, LIGHT, TEXT
+from modules.orbe_theme import apply_orbe_theme
 
 # ==== Importaciones nuevas y correctas ====
 from modules.dashboard.utils import (
@@ -136,7 +137,7 @@ def _load_activity_api(fecha_inicio_30: date):
         r_pres.raise_for_status()
         pres = [
             p for p in r_pres.json().get("data", [])
-            if (p.get("fecha_presupuesto") or "") >= fecha_inicio_30.isoformat()
+            if (p.get("fecha_presupuesto") or p.get("fecha") or "") >= fecha_inicio_30.isoformat()
         ]
     except Exception:
         pres = []
@@ -152,6 +153,55 @@ def _load_activity_api(fecha_inicio_30: date):
         acts = []
 
     return ped, pres, acts
+
+
+def _load_presupuestos_recientes(supabase, fecha_inicio_30: date) -> list:
+    if not supabase or not _table_exists(supabase, "presupuesto"):
+        return []
+    for field in ("fecha_presupuesto", "fecha"):
+        try:
+            return (
+                supabase.table("presupuesto")
+                .select(field)
+                .gte(field, fecha_inicio_30.isoformat())
+                .execute()
+                .data
+                or []
+            )
+        except Exception:
+            continue
+    return []
+
+
+def _load_presupuesto_map(supabase, pres_ids: list[int]) -> dict:
+    if not supabase or not _table_exists(supabase, "presupuesto") or not pres_ids:
+        return {}
+    variants = [
+        ("presupuestoid", "numero"),
+        ("presupuesto_id", "idnumero_pedido"),
+        ("presupuesto_id", "numero"),
+    ]
+    for id_field, num_field in variants:
+        try:
+            rows = (
+                supabase.table("presupuesto")
+                .select(f"{id_field},{num_field}")
+                .in_(id_field, pres_ids)
+                .execute()
+                .data
+                or []
+            )
+            out = {}
+            for r in rows:
+                pid = r.get(id_field)
+                if pid is None:
+                    continue
+                num = r.get(num_field) or pid
+                out[int(pid)] = num
+            return out
+        except Exception:
+            continue
+    return {}
 
 
 def _load_albaranes_last_days(supabase, days: int = 7) -> pd.DataFrame:
@@ -219,16 +269,17 @@ def _kpi_card(title: str, value: str, subtitle: str = "", color: str = PRIMARY):
 # 📊 DASHBOARD PRINCIPAL
 # ======================================================
 def render_dashboard(supabase):
+    apply_orbe_theme()
 
     # ------------------------------------------------------
     # 🧱 ENCABEZADO
     # ------------------------------------------------------
     st.markdown(
         f"""
-        <div style='background:#ecfdf5;padding:18px 20px;border-radius:12px;
-                    border-left:6px solid {PRIMARY};margin-bottom:18px;'>
-            <h2 style='margin:0;color:#065f46;'>📊 Panel General — EnteNova Gnosis · Orbe</h2>
-            <p style='color:#166534;margin-top:4px;'>Resumen comercial, CRM y actividad.</p>
+        <div style='background:{LIGHT};padding:18px 20px;border-radius:12px;
+                    border-left:6px solid {PRIMARY_DARK};margin-bottom:18px;'>
+            <h2 style='margin:0;color:{TEXT};'>📊 Panel General — EnteNova Gnosis · Orbe</h2>
+            <p style='color:#1e40af;margin-top:4px;'>Resumen comercial, CRM y actividad.</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -469,14 +520,7 @@ def render_dashboard(supabase):
         try:
             if supabase and _table_exists(supabase, "presupuesto"):
                 ped = _load_pedidos_api(fecha_inicio_30)
-                pres = (
-                    supabase.table("presupuesto")
-                    .select("fecha_presupuesto")
-                    .gte("fecha_presupuesto", fecha_inicio_30.isoformat())
-                    .execute()
-                    .data
-                    or []
-                )
+                pres = _load_presupuestos_recientes(supabase, fecha_inicio_30)
                 acts30 = api_listar({}).get("data", [])
                 acts30 = [a for a in acts30 if (a.get("fecha_accion") or "")[:10] >= fecha_inicio_30.isoformat()]
             else:
@@ -488,7 +532,7 @@ def render_dashboard(supabase):
                 if fecha:
                     records.append({"fecha": pd.to_datetime(fecha).date(), "tipo": "Pedidos"})
             for p in pres or []:
-                fecha = p.get("fecha_presupuesto")
+                fecha = p.get("fecha_presupuesto") or p.get("fecha")
                 if fecha:
                     records.append({"fecha": pd.to_datetime(fecha).date(), "tipo": "Presupuestos"})
             for a in acts30 or []:
@@ -549,16 +593,8 @@ def render_dashboard(supabase):
                 ]
                 pres_ids = [pid for pid in pres_ids if pid]
 
-                pres_rows = []
                 cli_rows = []
-                if supabase and _table_exists(supabase, "presupuesto"):
-                    pres_rows = (
-                        supabase.table("presupuesto")
-                        .select("presupuestoid, numero, clienteid")
-                        .in_("presupuestoid", pres_ids)
-                        .execute()
-                        .data
-                    )
+                pres_map = _load_presupuesto_map(supabase, pres_ids)
                 if supabase and _table_exists(supabase, "cliente"):
                     cli_ids = list({p["clienteid"] for p in ped_conv})
                     cli_rows = (
@@ -569,7 +605,6 @@ def render_dashboard(supabase):
                         .data
                     )
 
-                pres_map = {r["presupuestoid"]: r["numero"] for r in pres_rows}
                 cli_map = {
                     c["clienteid"]: (c.get("razonsocial") or c.get("nombre") or "-")
                     for c in cli_rows

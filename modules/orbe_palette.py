@@ -1,16 +1,16 @@
 # modules/orbe_palette.py
 """🎨 Paleta de colores corporativa Orbe (para usar en gráficos, UI, etc.)"""
 
-PRIMARY = "#16a34a"      # Verde principal
-PRIMARY_DARK = "#15803d" # Hover / énfasis
-SECONDARY = "#3b82f6"    # Azul complementario
+PRIMARY = "#7cbcff"      # Azul claro principal
+PRIMARY_DARK = "#4c8fe6" # Hover / énfasis
+SECONDARY = "#b4d9ff"    # Azul suave complementario
 SUCCESS = "#10b981"
 WARNING = "#f59e0b"
 DANGER = "#dc2626"
-TEXT = "#065f46"
-BACKGROUND = "#f0fdf4"
-BORDER = "#a7f3d0"
-LIGHT = "#ecfdf5"
+TEXT = "#1e3a8a"
+BACKGROUND = "#f6faff"
+BORDER = "#dbe9f6"
+LIGHT = "#f2f8ff"
 
 # Ejemplo de uso:
 # import modules.orbe_palette as colors
