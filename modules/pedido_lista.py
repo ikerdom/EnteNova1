@@ -64,9 +64,11 @@ def _render_filter_buttons(items):
     cols = st.columns(min(4, len(active)))
     for i, (label, value, fn) in enumerate(active):
         col = cols[i % len(cols)]
-        if col.button(f"✕ {label}: {value}", key=f"ped_chip_{i}_{label}"):
-            fn()
-            st.rerun()
+        col.button(
+            f"✕ {label}: {value}",
+            key=f"ped_chip_{i}_{label}",
+            on_click=fn,
+        )
 
 
 def _clear_pedido_filters():
@@ -194,14 +196,18 @@ def render_pedido_lista(_supabase=None):
     if top_items:
         st.caption("Top 5 clientes con más pedidos")
         cols_top = st.columns(min(5, len(top_items)))
+        def _set_pedido_cliente(label: str):
+            st.session_state.update({"pedido_cliente": label, "pedido_page": 1})
         for i, it in enumerate(top_items):
-            label = it.get("label") or f"Cliente {it.get('clienteid')}"
+            cid = it.get("clienteid")
+            label = clientes_rev.get(cid) if cid in clientes_rev else (it.get("label") or f"Cliente {cid}")
             count = it.get("count") or 0
-            if cols_top[i % len(cols_top)].button(f"{label} · {count}", key=f"ped_top_{it.get('clienteid')}"):
-                if label in clientes_map:
-                    st.session_state["pedido_cliente"] = label
-                st.session_state["pedido_page"] = 1
-                st.rerun()
+            cols_top[i % len(cols_top)].button(
+                f"{label} · {count}",
+                key=f"ped_top_{it.get('clienteid')}",
+                on_click=_set_pedido_cliente,
+                args=(label,),
+            )
 
     colf1, colf2, colf3, colf4, colf5 = st.columns([3, 2, 2, 2, 1])
     with colf1:
@@ -223,7 +229,7 @@ def render_pedido_lista(_supabase=None):
     with colf8:
         procedencia = st.text_input("Procedencia", key="pedido_procedencia")
     with colf9:
-        st.button("Limpiar filtros", on_click=_clear_pedido_filters, use_container_width=True)
+        st.button("Limpiar filtros", on_click=_clear_pedido_filters, width="stretch")
 
     with st.expander("Filtros avanzados", expanded=False):
         total_min_val = float(st.session_state.get("pedido_total_min") or 0.0)
@@ -273,7 +279,7 @@ def render_pedido_lista(_supabase=None):
         ("Buscar", (q or "").strip() or None, lambda: st.session_state.update({"pedido_q": ""})),
     ])
 
-    if st.button("🆕 Nuevo pedido", use_container_width=True):
+    if st.button("🆕 Nuevo pedido", width="stretch"):
         session["pedido_show_form"] = True
         session["pedido_editar_id"] = None
         session["show_pedido_modal"] = False
@@ -362,7 +368,7 @@ def _render_table(pedidos: list[dict], estados_rev: dict):
                 "Total": p.get("total"),
             }
         )
-    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
 
 def _render_pedido_card(p, estados_rev, clientes_rev):
@@ -401,7 +407,7 @@ def _render_pedido_card(p, estados_rev, clientes_rev):
     colA, colB, colC = st.columns(3)
     _, action_col = st.columns([5, 1])
     with action_col:
-        with st.popover("⋯", use_container_width=True):
+        with st.popover("⋯", width="stretch"):
             if st.button("Ver detalle", key=f"detalle_{p['pedido_id']}"):
                 st.session_state["pedido_modal_id"] = p["pedido_id"]
                 st.session_state["show_pedido_modal"] = True
@@ -435,16 +441,16 @@ def _render_pedido_modal(
 
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1:
-        if st.button("↩️ Cerrar detalle", use_container_width=True):
+        if st.button("↩️ Cerrar detalle", width="stretch"):
             st.session_state["show_pedido_modal"] = False
             st.session_state["pedido_modal_id"] = None
             st.rerun()
     with c2:
-        if st.button("✏️ Editar", use_container_width=True, disabled=not editable):
+        if st.button("✏️ Editar", width="stretch", disabled=not editable):
             st.session_state["pedido_edit_open"] = True
             st.rerun()
     with c3:
-        st.button("🗑️ Eliminar", use_container_width=True, disabled=True)
+        st.button("🗑️ Eliminar", width="stretch", disabled=True)
 
     with st.expander("📋 Detalle general del pedido", expanded=True):
         col1, col2, col3 = st.columns(3)
@@ -483,7 +489,7 @@ def _render_pedido_modal(
         st.info("ℹ️ No hay líneas registradas para este pedido.")
     else:
         df = pd.DataFrame(lineas_data)
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(df, width="stretch", hide_index=True)
 
     with st.expander("➕ Añadir línea", expanded=False):
         with st.form(f"form_add_linea_{pedido_id}"):
@@ -492,7 +498,7 @@ def _render_pedido_modal(
             cantidad = st.number_input("Cantidad", min_value=1.0, value=1.0)
             precio = st.number_input("Precio unitario", min_value=0.0, value=0.0, step=0.01)
             desc_manual = st.number_input("Descuento (%)", min_value=0.0, max_value=100.0, value=0.0, step=0.5)
-            add_ok = st.form_submit_button("💾 Añadir línea", use_container_width=True)
+            add_ok = st.form_submit_button("💾 Añadir línea", width="stretch")
 
         if add_ok:
             try:

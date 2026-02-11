@@ -95,7 +95,7 @@ def render_observaciones_form(clienteid: int, key_prefix: str = ""):
             key=f"{kp}obs_text_{clienteid}",
         )
 
-        if st.button("Guardar observacion", use_container_width=True, key=f"{kp}obs_save_{clienteid}"):
+        if st.button("Guardar observacion", width="stretch", key=f"{kp}obs_save_{clienteid}"):
             if not comentario.strip():
                 st.warning("Debes escribir un comentario.")
                 return

@@ -159,7 +159,7 @@ def render_tarifa_lista(supabase):
         if infinito:
             fh = date(2999, 12, 31)
 
-        if st.button("🚀 Promocionar combinación", use_container_width=True):
+        if st.button("🚀 Promocionar combinación", width="stretch"):
             if "(Selecciona)" in (cliente_nom, producto_nom, nueva_tarifa):
                 st.warning("⚠️ Selecciona cliente, producto y tarifa destino antes de continuar.")
             else:

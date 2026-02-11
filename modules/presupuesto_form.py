@@ -237,7 +237,7 @@ def render_presupuesto_form(presupuestoid=None, bloqueado=False, on_saved_rerun=
             disabled=bloqueado,
         )
 
-        guardar = st.form_submit_button("Guardar presupuesto", disabled=bloqueado, use_container_width=True)
+        guardar = st.form_submit_button("Guardar presupuesto", disabled=bloqueado, width="stretch")
 
     if guardar:
         try:

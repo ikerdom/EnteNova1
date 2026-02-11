@@ -35,7 +35,7 @@ def _render_empresas(supabase):
     if not rows:
         st.info("No hay empresas.")
         return
-    st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.dataframe(rows, width="stretch", hide_index=True)
 
 
 def _render_proveedores(supabase):
@@ -56,7 +56,7 @@ def _render_proveedores(supabase):
     if not rows:
         st.info("No hay proveedores.")
         return
-    st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.dataframe(rows, width="stretch", hide_index=True)
 
 
 def render_otros(supabase):

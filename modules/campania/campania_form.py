@@ -23,7 +23,7 @@ def render(supabase):
     # ======================================================
     # BOTÓN CANCELAR
     # ======================================================
-    if st.button("⬅️ Cancelar y volver al listado", use_container_width=True):
+    if st.button("⬅️ Cancelar y volver al listado", width="stretch"):
         st.session_state["campaniaid"] = None
         st.session_state["campania_step"] = 1
         st.session_state["campania_view"] = "lista"
@@ -426,7 +426,7 @@ def step3_confirmacion(supabase, campania, campaniaid):
             }
             for c in clientes
         ])
-        st.dataframe(df, hide_index=True, use_container_width=True)
+        st.dataframe(df, hide_index=True, width="stretch")
 
     st.divider()
 

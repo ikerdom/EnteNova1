@@ -112,7 +112,7 @@ def render_crm_form(clienteid: int):
 
             trabajador_asignado = trabajadores_map.get(trab_sel, trabajadorid)
 
-            submitted = st.form_submit_button("Guardar accion", use_container_width=True)
+            submitted = st.form_submit_button("Guardar accion", width="stretch")
 
         if submitted:
             if not titulo.strip():

@@ -94,7 +94,7 @@ def render(supa, campaniaid):
 
     st.dataframe(
         df_trab[["nombre", "apellidos", "total", "completadas", "pendientes", "avance"]],
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
 
@@ -129,7 +129,7 @@ def render(supa, campaniaid):
     st.dataframe(
         df_cli[["cliente", "total", "completadas", "pendientes", "avance"]],
         hide_index=True,
-        use_container_width=True,
+        width="stretch",
     )
 
     st.download_button(
@@ -191,7 +191,7 @@ def render(supa, campaniaid):
     st.dataframe(
         df_grupo.sort_values("total", ascending=False),
         hide_index=True,
-        use_container_width=True,
+        width="stretch",
     )
 
     st.download_button(

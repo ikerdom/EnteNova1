@@ -97,20 +97,20 @@ def render_contacto_form(clienteid: int, key_prefix: str = ""):
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            if st.button("Editar", key=f"{kp}edit_contact_{cid}", use_container_width=True):
+            if st.button("Editar", key=f"{kp}edit_contact_{cid}", width="stretch"):
                 st.session_state[f"{kp}edit_contact_{cid}"] = not st.session_state.get(
                     f"{kp}edit_contact_{cid}", False
                 )
 
         with col2:
-            if st.button("Eliminar", key=f"{kp}delete_contact_{cid}", use_container_width=True):
+            if st.button("Eliminar", key=f"{kp}delete_contact_{cid}", width="stretch"):
                 api_delete(f"/api/clientes/{clienteid}/contactos/{cid}")
                 st.toast("Contacto eliminado.")
                 st.rerun()
 
         with col3:
             if not es_principal:
-                if st.button("Hacer principal", key=f"{kp}main_contact_{cid}", use_container_width=True):
+                if st.button("Hacer principal", key=f"{kp}main_contact_{cid}", width="stretch"):
                     api_post(f"/api/clientes/{clienteid}/contactos/{cid}/hacer-principal")
                     st.toast("Contacto marcado como principal.")
                     st.rerun()
@@ -146,7 +146,7 @@ def _contacto_editor(clienteid: int, c: Optional[Dict[str, Any]] = None, key_pre
     col1, col2 = st.columns(2)
 
     with col1:
-        if st.button("Guardar", key=f"{prefix}_save", use_container_width=True):
+        if st.button("Guardar", key=f"{prefix}_save", width="stretch"):
             if not valor.strip():
                 st.warning("El valor es obligatorio.")
                 return
@@ -168,7 +168,7 @@ def _contacto_editor(clienteid: int, c: Optional[Dict[str, Any]] = None, key_pre
 
     with col2:
         if not is_new:
-            if st.button("Eliminar", key=f"{prefix}_delete", use_container_width=True):
+            if st.button("Eliminar", key=f"{prefix}_delete", width="stretch"):
                 api_delete(f"/api/clientes/{clienteid}/contactos/{cid}")
                 st.toast("Contacto eliminado.")
                 st.rerun()

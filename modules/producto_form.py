@@ -161,7 +161,7 @@ def render_producto_form(supabase, productoid=None, on_saved_rerun=True):
             # 💾 GUARDAR
             # =================================================
             guardar = st.form_submit_button(
-                "💾 Guardar producto", use_container_width=True
+                "💾 Guardar producto", width="stretch"
             )
 
         # ---------------------------

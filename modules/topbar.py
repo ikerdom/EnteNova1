@@ -74,7 +74,7 @@ def render_topbar(_supabase_unused):
                 st.session_state["mostrar_acciones_crm"] = not st.session_state.get("mostrar_acciones_crm", False)
         with c3:
             st.markdown(f"<div class='right'><span>{user} ({tipo})</span></div>", unsafe_allow_html=True)
-            if st.button("Cerrar sesión", key="btn_logout_topbar", use_container_width=True):
+            if st.button("Cerrar sesión", key="btn_logout_topbar", width="stretch"):
                 for key in ["cliente_actual", "cliente_creado", "user_email", "user_nombre", "tipo_usuario", "trabajadorid"]:
                     st.session_state.pop(key, None)
                 st.success("Sesión cerrada correctamente.")

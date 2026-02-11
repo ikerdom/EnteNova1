@@ -137,15 +137,15 @@ def _render_estado_quick_filters(estados_labels):
 
     c1, c2, c3 = st.columns(3)
     with c1:
-        if st.button("Todos", key="pres_qf_all", use_container_width=True):
+        if st.button("Todos", key="pres_qf_all", width="stretch"):
             st.session_state["pres_estado"] = "Todos"
             st.rerun()
     with c2:
-        if st.button("En espera", key="pres_qf_wait", use_container_width=True):
+        if st.button("En espera", key="pres_qf_wait", width="stretch"):
             st.session_state["pres_estado"] = buckets["espera"][0] if buckets["espera"] else "Todos"
             st.rerun()
     with c3:
-        if st.button("Aceptados", key="pres_qf_ok", use_container_width=True):
+        if st.button("Aceptados", key="pres_qf_ok", width="stretch"):
             st.session_state["pres_estado"] = buckets["aceptados"][0] if buckets["aceptados"] else "Todos"
             st.rerun()
 
@@ -274,7 +274,7 @@ def _render_nuevo_presupuesto_inline():
         with col6:
             cantidad = st.number_input("Cantidad", min_value=1, step=1, value=1)
 
-        crear = st.form_submit_button("Crear presupuesto", use_container_width=True)
+        crear = st.form_submit_button("Crear presupuesto", width="stretch")
 
     if not crear:
         return
@@ -382,7 +382,7 @@ def _render_card(r, estados_map: dict):
 
         _, action_col = st.columns([5, 1])
         with action_col:
-            with st.popover("⋯", use_container_width=True):
+            with st.popover("⋯", width="stretch"):
                 if st.button("Ver detalle", key=f"pres_detalle_{pres_id}"):
                     st.session_state["presupuesto_modal_id"] = pres_id
                     st.session_state["show_presupuesto_modal"] = True
@@ -414,7 +414,7 @@ def _render_table(rows):
         if c not in df.columns:
             df[c] = None
 
-    st.dataframe(df[cols], use_container_width=True, hide_index=True)
+    st.dataframe(df[cols], width="stretch", hide_index=True)
     buff = io.StringIO()
     df[cols].to_csv(buff, index=False)
     st.download_button(
@@ -489,12 +489,12 @@ def _render_presupuesto_modal(estados_map: dict):
 
         a1, a2, a3 = st.columns([1, 1, 1])
         with a1:
-            if st.button("↩️ Volver", use_container_width=True):
+            if st.button("↩️ Volver", width="stretch"):
                 st.session_state["show_presupuesto_modal"] = False
                 st.session_state["presupuesto_modal_id"] = None
                 st.rerun()
         with a2:
-            if st.button("🗑️ Eliminar", use_container_width=True, disabled=bloqueado):
+            if st.button("🗑️ Eliminar", width="stretch", disabled=bloqueado):
                 try:
                     borrar_presupuesto(pid)
                     st.success("✅ Presupuesto eliminado.")
@@ -505,11 +505,11 @@ def _render_presupuesto_modal(estados_map: dict):
                     st.error(f"❌ Error al eliminar: {e}")
         with a3:
             if "acept" in est_lower:
-                if st.button("🔄 Convertir", use_container_width=True):
+                if st.button("🔄 Convertir", width="stretch"):
                     convertir_presupuesto_a_pedido(pid)
                     st.rerun()
             else:
-                st.button("🔄 Convertir", use_container_width=True, disabled=True)
+                st.button("🔄 Convertir", width="stretch", disabled=True)
 
     if bloqueado:
         st.warning("🔒 Este presupuesto está Aceptado/Convertido y no se puede editar.")
@@ -558,19 +558,19 @@ def _render_presupuesto_modal(estados_map: dict):
                 st.warning("No hay conexion a base de datos.")
             else:
                 key = f"pres_show_pdf_{pid}"
-                if st.button("Ver PDF", key=key, use_container_width=True):
+                if st.button("Ver PDF", key=key, width="stretch"):
                     generate_pdf_for_download(supa, pid)
-                if st.button("Descargar PDF", key=f"pres_dl_pdf_{pid}", use_container_width=True):
+                if st.button("Descargar PDF", key=f"pres_dl_pdf_{pid}", width="stretch"):
                     try:
                         data_real = _build_data_real(supa, pid)
                         pdf_bytes, fname = build_pdf_bytes(data_real)
-                        st.download_button("Descargar PDF generado", pdf_bytes, file_name=fname, mime="application/pdf", use_container_width=True)
+                        st.download_button("Descargar PDF generado", pdf_bytes, file_name=fname, mime="application/pdf", width="stretch")
                     except Exception as err:
                         st.error(f"Error generando PDF: {err}")
 
                 colp1, colp2 = st.columns(2)
                 with colp1:
-                    if st.button("Emitir PDF", key=f"pres_emit_pdf_{pid}", use_container_width=True):
+                    if st.button("Emitir PDF", key=f"pres_emit_pdf_{pid}", width="stretch"):
                         _emitir_pdf_presupuesto(supa, pid, estados_map)
                 with colp2:
                     st.caption("Emite, guarda en storage y marca como Enviado.")
@@ -620,7 +620,7 @@ def render_presupuesto_lista(api_base: Optional[str] = None):
         "Visualiza, filtra, edita y genera presupuestos.",
         icon="🧾",
     ):
-        if st.button("Nuevo presupuesto", key="pres_btn_top_create", use_container_width=True):
+        if st.button("Nuevo presupuesto", key="pres_btn_top_create", width="stretch"):
             st.session_state["show_creator"] = True
             st.rerun()
         c1, c2 = st.columns([3, 1])
@@ -694,7 +694,7 @@ def render_presupuesto_lista(api_base: Optional[str] = None):
             with f9:
                 st.checkbox("Solo con lineas", key="pres_only_with_lines")
             with f10:
-                st.button("Limpiar filtros", on_click=_clear_pres_filters, use_container_width=True)
+                st.button("Limpiar filtros", on_click=_clear_pres_filters, width="stretch")
 
             f11, f12, f13 = st.columns(3)
             with f11:

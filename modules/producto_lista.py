@@ -114,8 +114,9 @@ def _prod_compare_add(pid: Any, label: str):
     items.append({"id": pid, "label": label})
     st.session_state["prod_compare"] = items
     st.session_state["prod_compare_last"] = label
-    if len(items) >= 2 and not st.session_state.get("prod_detalle_id"):
-        st.session_state["prod_detalle_id"] = pid
+    if len(items) >= 2:
+        st.session_state["prod_compare_mode"] = True
+        st.session_state["prod_detalle_id"] = items[0]["id"]
         st.rerun()
 
 
@@ -188,16 +189,10 @@ def _render_compare_panel_producto(main_productoid: int):
     st.markdown("---")
     st.subheader("Vista comparativa")
     st.caption("Coloca productos a la izquierda y derecha para verlos a la vez.")
-    search_col, add_col = st.columns([3, 1])
-    with search_col:
-        q_cmp = st.text_input("Buscar producto para comparar", key=f"cmp_prod_q_{main_productoid}")
-    with add_col:
-        st.markdown(" ")
-        st.markdown(" ")
-        add_clicked = st.button("Buscar", key=f"cmp_prod_search_{main_productoid}")
+    q_cmp = st.text_input("Buscar producto para comparar", key=f"cmp_prod_q_{main_productoid}")
 
     options = []
-    if q_cmp and add_clicked:
+    if q_cmp and len(q_cmp.strip()) >= 2:
         payload = _api_get_cached("/api/productos", params={"q": q_cmp, "page": 1, "page_size": 10})
         for p in payload.get("data", []):
             label = p.get("titulo_automatico") or f"Producto {p.get('catalogo_productoid')}"
@@ -259,7 +254,7 @@ def _render_compare_panel_producto(main_productoid: int):
                 for label_name, field in rows
             }
         df = pd.DataFrame(table)
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width="stretch")
         return
 
     main_payloads = payloads[:2]
@@ -588,7 +583,13 @@ def render_producto_lista(supabase=None):
     # Detalle prioritario si seleccionado
     sel = st.session_state.get("prod_detalle_id")
     if sel:
-        _render_modal_producto(sel, supabase or st.session_state.get("supa"))
+        if st.session_state.get("prod_compare_mode"):
+            if st.button("Ver ficha completa", key="prod_cmp_full"):
+                st.session_state["prod_compare_mode"] = False
+                st.rerun()
+            _render_compare_panel_producto(int(sel))
+        else:
+            _render_modal_producto(sel, supabase or st.session_state.get("supa"))
         st.markdown("---")
 
     if not productos:
@@ -679,9 +680,9 @@ def _render_card_producto(p: dict):
     st.markdown("</div></div>", unsafe_allow_html=True)
     _, action_col = st.columns([5, 1])
     with action_col:
-        with st.popover("⋯", use_container_width=True):
+        with st.popover("⋯", width="stretch"):
             if st.button("Ver detalle", key=f"prod_detalle_{pid}"):
-                st.session_state["prod_detalle_id"] = pid
+                st.session_state.update({"prod_detalle_id": pid, "prod_compare_mode": False})
                 st.rerun()
             if st.button("Comparar", key=f"prod_cmp_{pid}"):
                 label = p.get("titulo_automatico") or f"Producto {pid}"
@@ -699,7 +700,7 @@ def _render_tabla_productos(productos: list):
         for col in cols_sel:
             row[col] = p.get(col)
         rows.append(row)
-    st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.dataframe(rows, width="stretch", hide_index=True)
 
     # Selector rapido para abrir detalle desde la tabla
     opciones = [
@@ -717,7 +718,7 @@ def _render_tabla_productos(productos: list):
         )
         st.markdown('<div class="icon-btn">', unsafe_allow_html=True)
         if st.button("🔍", key="prod_sel_btn"):
-            st.session_state["prod_detalle_id"] = label_map[elegido]
+            st.session_state.update({"prod_detalle_id": label_map[elegido], "prod_compare_mode": False})
             st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
         if st.button("Comparar", key="prod_sel_cmp"):
@@ -734,7 +735,7 @@ def _render_modal_producto(productoid: int, supabase=None):
     except Exception as e:
         st.error(f"Error cargando detalle de producto: {e}")
         if st.button("Cerrar", key=f"cerrar_prod_err_{productoid}", width="stretch"):
-            st.session_state["prod_detalle_id"] = None
+            st.session_state.update({"prod_detalle_id": None, "prod_compare_mode": False})
             st.rerun()
         return
 
@@ -750,7 +751,7 @@ def _render_modal_producto(productoid: int, supabase=None):
     with top1:
         st.subheader(titulo)
     with top2:
-        if st.button("Agregar a comparar", key=f"prod_cmp_add_{productoid}", use_container_width=True):
+        if st.button("Agregar a comparar", key=f"prod_cmp_add_{productoid}", width="stretch"):
             _prod_compare_add(productoid, titulo)
 
     left, right = st.columns([1, 2])
@@ -822,7 +823,7 @@ def _render_modal_producto(productoid: int, supabase=None):
             st.caption(f"Totales desde {since.isoformat()}")
 
     if st.button("Cerrar detalle", key=f"cerrar_prod_{productoid}", width="stretch"):
-        st.session_state["prod_detalle_id"] = None
+        st.session_state.update({"prod_detalle_id": None, "prod_compare_mode": False})
         st.rerun()
 
     _render_compare_panel_producto(productoid)

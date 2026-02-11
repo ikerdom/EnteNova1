@@ -567,7 +567,7 @@ def generate_pdf_for_download(supabase, presupuestoid: int):
         pdf_bytes,
         file_name=fname,
         mime="application/pdf",
-        use_container_width=True,
+        width="stretch",
     )
 
     return pdf_bytes, fname

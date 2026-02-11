@@ -33,6 +33,6 @@ def render_impuesto_lista(supabase):
             st.info("Sin impuestos.")
             return
         df = pd.DataFrame(rows)
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width="stretch")
     except Exception as e:
         st.error(f"❌ Error cargando impuestos: {e}")

@@ -145,12 +145,12 @@ def _render_incidencia_card(i, trabajadores, clientes, estados_map):
 
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("👁️ Ver workflow", key=f"inci_work_{i['incidenciaid']}", use_container_width=True):
+        if st.button("👁️ Ver workflow", key=f"inci_work_{i['incidenciaid']}", width="stretch"):
             st.session_state["inci_detalle_id"] = i["incidenciaid"]
             st.session_state["inci_show_modal"] = True
             st.rerun()
     with c2:
-        st.button("✅ Marcar solucionada", key=f"inci_solve_{i['incidenciaid']}", use_container_width=True, disabled=True)
+        st.button("✅ Marcar solucionada", key=f"inci_solve_{i['incidenciaid']}", width="stretch", disabled=True)
 
 # ======================================================
 # 📋 Tabla
@@ -163,7 +163,7 @@ def _render_incidencia_table(rows, trabajadores, clientes, estados_map):
     df["Responsable"] = df["responsableid"].apply(lambda x: _label(trabajadores, x))
     df["Cliente"] = df["clienteid"].apply(lambda x: _label(clientes, x))
     df["Estado"] = df.apply(lambda r: _estado_text_from_id(r.get("incidencia_estadoid"), estados_map) or r.get("estado", "-"), axis=1)
-    st.dataframe(df[["incidenciaid", "tipo", "descripcion", "Estado", "Cliente", "Responsable", "fecha_creacion"]], use_container_width=True)
+    st.dataframe(df[["incidenciaid", "tipo", "descripcion", "Estado", "Cliente", "Responsable", "fecha_creacion"]], width="stretch")
 
 # ======================================================
 # 🕒 Timeline
@@ -298,14 +298,14 @@ def render_incidencia_detalle(supabase):
 
     st.markdown("---")
     nuevo = st.text_area("✍️ Añadir comentario o nota")
-    if st.button("💾 Enviar comentario", use_container_width=True):
+    if st.button("💾 Enviar comentario", width="stretch"):
         if nuevo.strip():
             _add_comentario(supabase, incidenciaid, nuevo.strip(), st.session_state.get("user_nombre", "Agente"))
             st.success("✅ Comentario añadido.")
             st.rerun()
 
     st.markdown("---")
-    if st.button("⬅️ Volver al listado", use_container_width=True):
+    if st.button("⬅️ Volver al listado", width="stretch"):
         st.session_state["inci_show_modal"] = False
         st.session_state["inci_detalle_id"] = None
         st.rerun()

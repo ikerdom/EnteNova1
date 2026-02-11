@@ -32,7 +32,7 @@ def render(supa):
 
     if not _table_exists(supa, "campania"):
         st.info("La tabla `campania` no existe en Supabase. Crea la tabla o desactiva este módulo.")
-        if st.button("Ocultar módulo de campañas", use_container_width=True):
+        if st.button("Ocultar módulo de campañas", width="stretch"):
             st.session_state["menu_principal"] = "📊 Panel general"
             st.rerun()
         return
@@ -40,7 +40,7 @@ def render(supa):
     # ======================================================
     # ➕ BOTÓN CREAR NUEVA CAMPAÑA
     # ======================================================
-    if st.button("➕ Crear nueva campaña", use_container_width=True):
+    if st.button("➕ Crear nueva campaña", width="stretch"):
         st.session_state["campaniaid"] = None
         st.session_state["campania_step"] = 1
         st.session_state["campania_view"] = "form"

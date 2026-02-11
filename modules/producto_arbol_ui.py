@@ -219,7 +219,7 @@ def render_arbol_productos(supabase):
                         if st.button(
                             "Ver catalogo filtrado",
                             key=f"tree_cat_{cat_id}_fam_{fam_id}",
-                            use_container_width=True,
+                            width="stretch",
                         ):
                             st.session_state["modo_producto"] = "Catalogo"
                             st.session_state["prod_show_form"] = False
@@ -255,7 +255,7 @@ def render_arbol_productos(supabase):
                         if st.button(
                             "Mostrar mas",
                             key=f"tree_more_{cat_id}_{fam_id}",
-                            use_container_width=True,
+                            width="stretch",
                         ):
                             st.session_state[limit_key] = min(
                                 len(fam_products),
@@ -267,7 +267,7 @@ def render_arbol_productos(supabase):
                 if st.button(
                     "Mostrar mas familias",
                     key=f"tree_more_fam_{cat_id}",
-                    use_container_width=True,
+                    width="stretch",
                 ):
                     st.session_state[fam_limit_key] = min(
                         len(fam_items),
@@ -276,7 +276,7 @@ def render_arbol_productos(supabase):
                     st.rerun()
 
     st.markdown("---")
-    if st.button("Volver al catalogo", key="tree_back_catalog", use_container_width=True):
+    if st.button("Volver al catalogo", key="tree_back_catalog", width="stretch"):
         st.session_state["modo_producto"] = "Catalogo"
         st.session_state["prod_show_form"] = False
         st.rerun()

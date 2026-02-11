@@ -555,7 +555,7 @@ def render_dashboard(supabase):
                 st.info("No hay actividad reciente.")
             else:
                 df_chart = df_all.groupby(["fecha", "tipo"]).size().unstack(fill_value=0)
-                st.line_chart(df_chart, use_container_width=True)
+                st.line_chart(df_chart, width="stretch")
 
         except Exception as e:
             st.error(f"Error gráfico: {e}")

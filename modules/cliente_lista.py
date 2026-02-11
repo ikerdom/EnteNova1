@@ -214,8 +214,10 @@ def _compare_add(cid: Any, label: str, cif: str):
         return
     items.append({"id": cid, "label": label, "cif": cif})
     st.session_state["cli_compare"] = items
-    if len(items) >= 2 and not st.session_state.get("cliente_detalle_id"):
-        st.session_state["cliente_detalle_id"] = cid
+    st.session_state["cli_compare_last"] = label
+    if len(items) >= 2:
+        st.session_state["cli_compare_mode"] = True
+        st.session_state["cliente_detalle_id"] = items[0]["id"]
         st.rerun()
 
 
@@ -272,6 +274,10 @@ def _render_compact_cliente(clienteid: int, label: str):
 
 def _render_compare_card(data: dict, title: str):
     cli = data.get("cliente", {})
+    contactos = data.get("contactos") or []
+    direcciones = data.get("direcciones") or []
+    cp = data.get("contacto_principal") or (contactos[0] if contactos else {})
+    df = direcciones[0] if direcciones else {}
     tipo = cli.get("clienteoproveedor") or "-"
     grupo = cli.get("idgrupo") or "-"
     razon = cli.get("razonsocial") or cli.get("nombre") or title
@@ -307,6 +313,26 @@ def _render_compare_card(data: dict, title: str):
                     ("Teléfono", cli.get("telefono") or cli.get("movil")),
                     ("Provincia", cli.get("provincia") or cli.get("idprovincia")),
                     ("Municipio", cli.get("municipio") or cli.get("idmunicipio")),
+                ]
+            )
+        st.markdown("**Contacto y dirección**")
+        c1, c2 = st.columns(2)
+        with c1:
+            _render_kv_block(
+                [
+                    ("Contacto", cp.get("nombre") or cp.get("razonsocial")),
+                    ("Cargo", cp.get("cargo")),
+                    ("Email", cp.get("email") or cp.get("correoelectronico")),
+                    ("Teléfono", cp.get("telefono") or cp.get("movil") or cp.get("valor")),
+                ]
+            )
+        with c2:
+            _render_kv_block(
+                [
+                    ("Dirección", df.get("direccion") or df.get("direccionfiscal")),
+                    ("CP", df.get("codigopostal")),
+                    ("Municipio", df.get("municipio") or df.get("rci_poblacion")),
+                    ("Provincia", df.get("idprovincia") or df.get("provincia")),
                 ]
             )
 
@@ -380,7 +406,7 @@ def _render_compare_panel(main_clienteid: int):
                 for label_name, field in rows
             }
         df = pd.DataFrame(table)
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width="stretch")
         return
 
     # Izquierda/Derecha: máximo 2 columnas visibles, el resto apilado abajo
@@ -415,6 +441,15 @@ def render_cliente_lista(API_URL: str):
 
     st.header("Gestion de clientes")
     st.caption("Consulta, filtra y accede al detalle completo de tus clientes.")
+    last_added = st.session_state.pop("cli_compare_last", None)
+    if last_added:
+        with st.container(border=True):
+            c1, c2 = st.columns([6, 1])
+            with c1:
+                st.markdown(f"**Añadido a comparativa:** {last_added}")
+                st.caption("Abre un cliente para ver la comparativa izquierda/derecha.")
+            with c2:
+                st.button("OK", key="cli_cmp_ok")
 
     ctop1, ctop2 = st.columns(2)
     with ctop1:
@@ -482,38 +517,35 @@ def render_cliente_lista(API_URL: str):
         st.button("Limpiar filtros", on_click=_clear_filters)
 
     top_pres = _api_get_cached("/api/presupuestos/top-clientes", params={"limit": 5})
-    top_ped = _api_get_cached("/api/pedidos/top-clientes", params={"limit": 5})
     top_pres_items = top_pres.get("data") or []
-    top_ped_items = top_ped.get("data") or []
-    if top_pres_items or top_ped_items:
-        st.caption("Top clientes")
-        cols = st.columns(2)
-        with cols[0]:
-            if top_pres_items:
-                st.caption("Presupuestos")
-                for it in top_pres_items:
-                    label = it.get("label") or f"Cliente {it.get('clienteid')}"
-                    count = it.get("count") or 0
-                    if st.button(f"{label} · {count}", key=f"cli_top_pres_{it.get('clienteid')}"):
-                        st.session_state["cli_q"] = label
-                        st.session_state["cli_page"] = 1
-                        st.rerun()
-        with cols[1]:
-            if top_ped_items:
-                st.caption("Pedidos")
-                for it in top_ped_items:
-                    label = it.get("label") or f"Cliente {it.get('clienteid')}"
-                    count = it.get("count") or 0
-                    if st.button(f"{label} · {count}", key=f"cli_top_ped_{it.get('clienteid')}"):
-                        st.session_state["cli_q"] = label
-                        st.session_state["cli_page"] = 1
-                        st.rerun()
+    if top_pres_items:
+        st.caption("Top clientes (presupuestos)")
+        cols = st.columns(min(5, len(top_pres_items)))
+
+        def _set_cli_q(label: str):
+            st.session_state.update({"cli_q": label, "cli_page": 1})
+
+        for i, it in enumerate(top_pres_items):
+            label = it.get("label") or f"Cliente {it.get('clienteid')}"
+            count = it.get("count") or 0
+            cols[i % len(cols)].button(
+                f"{label} · {count}",
+                key=f"cli_top_pres_{it.get('clienteid')}",
+                on_click=_set_cli_q,
+                args=(label,),
+            )
 
     st.markdown("---")
 
     sel = st.session_state.get("cliente_detalle_id")
     if sel:
-        _render_detalle_panel(sel)
+        if st.session_state.get("cli_compare_mode"):
+            if st.button("Ver ficha completa", key="cli_cmp_full"):
+                st.session_state["cli_compare_mode"] = False
+                st.rerun()
+            _render_compare_panel(int(sel))
+        else:
+            _render_detalle_panel(sel)
         st.markdown("---")
         st.subheader("Catálogo de clientes")
 
@@ -647,7 +679,7 @@ def render_cliente_lista(API_URL: str):
         df = pd.DataFrame(rows)
         st.dataframe(
             df,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             column_config={
                 "razonsocial": st.column_config.TextColumn("Razon social"),
@@ -669,7 +701,7 @@ def render_cliente_lista(API_URL: str):
             elegido = st.selectbox("Detalle de cliente", options=list(label_map.keys()))
             st.markdown('<div class="icon-btn">', unsafe_allow_html=True)
             if st.button("🔍", key="cli_table_open"):
-                st.session_state["cliente_detalle_id"] = label_map[elegido]
+                st.session_state.update({"cliente_detalle_id": label_map[elegido], "cli_compare_mode": False})
                 st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
             if st.button("Comparar", key="cli_table_buy"):
@@ -740,9 +772,9 @@ def _render_card(c: Dict[str, Any]):
     cid = c.get("clienteid")
     _, action_col = st.columns([5, 1])
     with action_col:
-        with st.popover("⋯", use_container_width=True):
+        with st.popover("⋯", width="stretch"):
             if st.button("Ver detalle", key=f"cli_detalle_{cid}"):
-                st.session_state["cliente_detalle_id"] = cid
+                st.session_state.update({"cliente_detalle_id": cid, "cli_compare_mode": False})
                 st.rerun()
             if st.button("Comparar", key=f"cli_cmp_{cid}"):
                 label = c.get("razonsocial") or c.get("nombre") or "Cliente"
@@ -753,22 +785,22 @@ def _render_card(c: Dict[str, Any]):
 def _render_detalle_panel(clienteid: int):
     top1, top2, top3 = st.columns([2, 1, 1])
     with top1:
-        if st.button("Crear presupuesto para este cliente", key=f"cli_pres_{clienteid}", use_container_width=True):
+        if st.button("Crear presupuesto para este cliente", key=f"cli_pres_{clienteid}", width="stretch"):
             st.session_state["pres_cli_prefill"] = int(clienteid)
             st.session_state["show_creator"] = True
             st.session_state["menu_principal"] = "💼 Gestion de presupuestos"
             st.rerun()
     with top2:
-        if st.button("Editar cliente", key=f"cli_edit_top_{clienteid}", use_container_width=True):
+        if st.button("Editar cliente", key=f"cli_edit_top_{clienteid}", width="stretch"):
             st.session_state["cli_show_form"] = "cliente"
             st.session_state["cliente_actual"] = clienteid
             st.rerun()
-        if st.button("Agregar a comparar", key=f"cli_cmp_add_{clienteid}", use_container_width=True):
+        if st.button("Agregar a comparar", key=f"cli_cmp_add_{clienteid}", width="stretch"):
             label = f"Cliente {clienteid}"
             _compare_add(clienteid, label, "")
     with top3:
-        if st.button("Cerrar detalle", key=f"cerrar_cli_top_{clienteid}", use_container_width=True):
-            st.session_state["cliente_detalle_id"] = None
+        if st.button("Cerrar detalle", key=f"cerrar_cli_top_{clienteid}", width="stretch"):
+            st.session_state.update({"cliente_detalle_id": None, "cli_compare_mode": False})
             st.rerun()
 
     with st.container(border=True):
@@ -780,7 +812,7 @@ def _render_detalle_panel(clienteid: int):
         if data.get("_error"):
             st.error(f"Error cargando detalle: {data['_error']}")
             if st.button("Cerrar", key=f"cerrar_cli_err_{clienteid}"):
-                st.session_state["cliente_detalle_id"] = None
+                st.session_state.update({"cliente_detalle_id": None, "cli_compare_mode": False})
                 st.rerun()
             return
 
@@ -946,7 +978,7 @@ def _render_pedidos_tab(clienteid: int):
     df = pd.DataFrame(rows)
     st.dataframe(
         df,
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         column_config={
             "pedido_id": st.column_config.NumberColumn("Pedido", format="%d"),

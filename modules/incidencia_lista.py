@@ -74,7 +74,7 @@ def render_incidencia_lista(supabase):
                 if origen_id == 0:
                     origen_id = None
 
-            enviar = st.form_submit_button("Registrar incidencia", use_container_width=True)
+            enviar = st.form_submit_button("Registrar incidencia", width="stretch")
 
         if enviar:
             if not tipo.strip() or not descripcion.strip():
@@ -126,7 +126,7 @@ def render_incidencia_lista(supabase):
     with d2:
         fecha_hasta = st.date_input("Hasta", value=st.session_state.get("inci_to"), key="inci_to")
     with d3:
-        st.button("Limpiar filtros", on_click=_clear_inci_filters, use_container_width=True)
+        st.button("Limpiar filtros", on_click=_clear_inci_filters, width="stretch")
 
     # Chips compactos
     chips = []
@@ -240,12 +240,12 @@ def _render_incidencia_card(i, trabajadores):
 
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("Ver workflow", key=f"detalle_{i['incidenciaid']}", use_container_width=True):
+        if st.button("Ver workflow", key=f"detalle_{i['incidenciaid']}", width="stretch"):
             st.session_state["inci_detalle_id"] = i["incidenciaid"]
             st.session_state["inci_show_modal"] = True
             st.rerun()
     with col2:
-        if st.button("Marcar solucionada", key=f"solve_{i['incidenciaid']}", use_container_width=True):
+        if st.button("Marcar solucionada", key=f"solve_{i['incidenciaid']}", width="stretch"):
             now = datetime.now().isoformat(timespec="seconds")
             supa = st.session_state.get("supa")
             if supa:
@@ -277,11 +277,11 @@ def _render_incidencia_table(data, trabajadores):
     show_cols = ["incidenciaid", "tipo", "origen_tipo", "descripcion", "estado", "Responsable", "fecha_creacion"]
     show_cols = [c for c in show_cols if c in df.columns]
 
-    st.dataframe(df[show_cols].sort_values("fecha_creacion", ascending=False), hide_index=True, use_container_width=True)
+    st.dataframe(df[show_cols].sort_values("fecha_creacion", ascending=False), hide_index=True, width="stretch")
 
     opts = {f"#{r['incidenciaid']} - {r.get('tipo','')[:30]}": r["incidenciaid"] for r in data}
     sel_label = st.selectbox("Abrir incidencia", list(opts.keys()), key="inci_sel")
-    if st.button("Ver workflow seleccionado", key="inci_sel_btn", use_container_width=True):
+    if st.button("Ver workflow seleccionado", key="inci_sel_btn", width="stretch"):
         st.session_state["inci_detalle_id"] = opts[sel_label]
         st.session_state["inci_show_modal"] = True
         st.rerun()

@@ -221,8 +221,8 @@ def render_cliente_form(modo: str = "cliente"):
 
     colg, colx = prev_l.columns([3, 1])
     guardar_label = "Guardar cambios" if is_edit else "Guardar"
-    guardar = colg.button(guardar_label, use_container_width=True, key=f"{key_prefix}_guardar")
-    cancelar = colx.button("Salir", use_container_width=True, key=f"{key_prefix}_cancelar")
+    guardar = colg.button(guardar_label, width="stretch", key=f"{key_prefix}_guardar")
+    cancelar = colx.button("Salir", width="stretch", key=f"{key_prefix}_cancelar")
 
     if cancelar:
         st.session_state["cli_show_form"] = None

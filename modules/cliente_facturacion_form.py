@@ -92,7 +92,7 @@ def render_facturacion_form(_supabase_unused, clienteid):
                 titular = st.text_input("Titular", value=tarjeta_row.get("titular", ""))
 
     st.markdown("---")
-    if st.button("💾 Guardar configuración de facturación", use_container_width=True):
+    if st.button("💾 Guardar configuración de facturación", width="stretch"):
         if campos_banco and not iban.strip():
             st.warning("⚠️ IBAN obligatorio para pagos bancarios.")
             return

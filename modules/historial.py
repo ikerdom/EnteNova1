@@ -322,7 +322,7 @@ def render_historial(supabase):
 
     if has_log:
         st.subheader("Cambios en base de datos")
-        if st.button("Ver historial de cambios (Log SQL)", use_container_width=True):
+        if st.button("Ver historial de cambios (Log SQL)", width="stretch"):
             st.session_state["mostrar_log_sql"] = True
 
         if st.session_state.get("mostrar_log_sql"):

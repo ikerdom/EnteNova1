@@ -185,7 +185,7 @@ def render_albaran_form(_supabase_unused, clienteid: int):
         import pandas as pd
 
         df = pd.DataFrame(table_rows)
-        st.dataframe(df[cols_sel], use_container_width=True, hide_index=True)
+        st.dataframe(df[cols_sel], width="stretch", hide_index=True)
 
     st.markdown("---")
     st.subheader("Líneas de albarán")
@@ -244,7 +244,7 @@ def render_albaran_form(_supabase_unused, clienteid: int):
                 import pandas as pd
 
                 df_lines = pd.DataFrame(lineas)
-                st.dataframe(df_lines[line_cols_sel], use_container_width=True, hide_index=True)
+                st.dataframe(df_lines[line_cols_sel], width="stretch", hide_index=True)
 
     st.markdown("---")
     p1, p2, p3 = st.columns(3)

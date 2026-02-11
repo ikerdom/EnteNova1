@@ -160,8 +160,8 @@ def render_actuacion_form(supabase, act=None, fecha_default=None):
         )
 
         colb1, colb2 = st.columns(2)
-        guardar = colb1.form_submit_button("Guardar", use_container_width=True)
-        cancelar = colb2.form_submit_button("Cerrar", use_container_width=True)
+        guardar = colb1.form_submit_button("Guardar", width="stretch")
+        cancelar = colb2.form_submit_button("Cerrar", width="stretch")
 
         if cancelar:
             st.session_state["crm_actuacion_detalle_id"] = None

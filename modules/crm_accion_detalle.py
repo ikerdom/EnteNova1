@@ -119,7 +119,7 @@ def render_crm_accion_detalle(_supabase_unused, accionid: int):
                 with r2:
                     recordatorio_hora = st.time_input("Hora recordatorio", value=time(9, 0))
 
-            guardar = st.form_submit_button("Guardar cambios", use_container_width=True)
+            guardar = st.form_submit_button("Guardar cambios", width="stretch")
 
         if guardar:
             payload = {

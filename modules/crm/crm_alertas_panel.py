@@ -47,7 +47,7 @@ def render_alertas_usuario(supa):
 
     if alertas["criticas"]:
         df = _alertas_to_df(alertas["criticas"])
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(df, width="stretch", hide_index=True)
     else:
         st.info("No hay alertas críticas.")
 
@@ -60,7 +60,7 @@ def render_alertas_usuario(supa):
 
     if alertas["hoy"]:
         df = _alertas_to_df(alertas["hoy"])
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(df, width="stretch", hide_index=True)
     else:
         st.info("No hay actuaciones para hoy.")
 
@@ -73,7 +73,7 @@ def render_alertas_usuario(supa):
 
     if alertas["proximas"]:
         df = _alertas_to_df(alertas["proximas"])
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(df, width="stretch", hide_index=True)
     else:
         st.info("No hay actuaciones próximas.")
 
@@ -86,7 +86,7 @@ def render_alertas_usuario(supa):
 
     if alertas["seguimiento"]:
         df = _alertas_to_df(alertas["seguimiento"])
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(df, width="stretch", hide_index=True)
     else:
         st.info("Sin seguimientos pendientes.")
 
@@ -115,7 +115,7 @@ def render_alertas_supervision(supa):
     st.divider()
 
     df = _alertas_global_to_df(data["criticas"])
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.dataframe(df, width="stretch", hide_index=True)
 
 
 # ======================================================

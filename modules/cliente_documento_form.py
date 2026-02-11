@@ -38,7 +38,7 @@ def render_documento_form(_supabase_unused, clienteid: int):
         url = st.text_input("URL o ruta del documento", placeholder="https://...", key=f"url_doc_{clienteid}")
         obs = st.text_area("Observaciones", placeholder="Ej. Factura electrónica, contrato firmado…", key=f"obs_doc_{clienteid}")
 
-        if st.button("📤 Guardar documento", key=f"guardar_doc_{clienteid}", use_container_width=True):
+        if st.button("📤 Guardar documento", key=f"guardar_doc_{clienteid}", width="stretch"):
             if not url.strip():
                 st.warning("⚠️ Debes indicar una URL o ruta válida.")
                 return

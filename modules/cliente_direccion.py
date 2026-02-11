@@ -129,12 +129,12 @@ def render_direccion_form(clienteid: int, key_prefix: str = ""):
 
         c1, c2 = st.columns(2)
         with c1:
-            if st.button("Editar", key=f"{kp}edit_dir_{dir_id}", use_container_width=True):
+            if st.button("Editar", key=f"{kp}edit_dir_{dir_id}", width="stretch"):
                 st.session_state[f"{kp}edit_dir_{dir_id}"] = not st.session_state.get(
                     f"{kp}edit_dir_{dir_id}", False
                 )
         with c2:
-            if st.button("Eliminar", key=f"{kp}del_dir_{dir_id}", use_container_width=True):
+            if st.button("Eliminar", key=f"{kp}del_dir_{dir_id}", width="stretch"):
                 api_delete(f"/api/clientes/{clienteid}/direcciones/{dir_id}")
                 st.toast("Direccion eliminada.")
                 st.rerun()
@@ -233,7 +233,7 @@ def _direccion_editor(
 
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("Guardar", key=f"{prefix}_save", use_container_width=True):
+        if st.button("Guardar", key=f"{prefix}_save", width="stretch"):
             if is_new:
                 api_post(f"/api/clientes/{clienteid}/direcciones", payload)
                 st.toast("Direccion creada.")
@@ -244,7 +244,7 @@ def _direccion_editor(
 
     with c2:
         if not is_new:
-            if st.button("Eliminar", key=f"{prefix}_delete", use_container_width=True):
+            if st.button("Eliminar", key=f"{prefix}_delete", width="stretch"):
                 api_delete(f"/api/clientes/{clienteid}/direcciones/{dir_id}")
                 st.toast("Direccion eliminada.")
                 st.rerun()

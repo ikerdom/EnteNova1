@@ -22,7 +22,7 @@ def render(campaniaid: int):
     if llamada_id:
         st.title("📞 Llamada CRM")
 
-        if st.button("⬅️ Volver a la campaña", use_container_width=True):
+        if st.button("⬅️ Volver a la campaña", width="stretch"):
             st.session_state["campania_llamada_abierta"] = None
             st.rerun()
 
@@ -185,7 +185,7 @@ def render(campaniaid: int):
             .reset_index()
         )
 
-        st.dataframe(df_trab, hide_index=True, use_container_width=True)
+        st.dataframe(df_trab, hide_index=True, width="stretch")
 
         df_trab["avance"] = (df_trab["completadas"] / df_trab["total"] * 100).round(1)
 
@@ -209,7 +209,7 @@ def render(campaniaid: int):
             .reset_index()
         )
 
-        st.dataframe(df_cli, hide_index=True, use_container_width=True)
+        st.dataframe(df_cli, hide_index=True, width="stretch")
 
         # Abrir llamada
         st.markdown("### 📞 Abrir llamada")

@@ -111,7 +111,7 @@ def render_diagramas(embed=False):
     for i, tab in enumerate(tabs):
         with tab:
             g = generar_diagrama(tipos[i])
-            st.graphviz_chart(g, use_container_width=True)
+            st.graphviz_chart(g, width="stretch")
             st.caption(f"Diagrama: **{tipos[i]}** — modelo de datos y relaciones clave.")
 
     if not embed:

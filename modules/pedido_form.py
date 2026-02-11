@@ -97,7 +97,7 @@ def render_pedido_form(_supabase_unused, pedidoid: int | None = None, on_saved_r
             obs = st.text_area("Observaciones", pedido.get("observaciones") or "", height=120)
             obs_log = st.text_area("Obs. logística", pedido.get("obs_logistica") or "", height=120)
 
-            enviar = st.form_submit_button("💾 Guardar pedido", use_container_width=True)
+            enviar = st.form_submit_button("💾 Guardar pedido", width="stretch")
 
         if enviar:
             payload = {

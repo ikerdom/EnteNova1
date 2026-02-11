@@ -95,7 +95,7 @@ def render_llamada_workflow(supabase, crm_actuacionid: int):
         return datetime.fromisoformat(x.replace("Z", "+00:00"))
 
     if not hora_inicio:
-        if st.button("Iniciar llamada", use_container_width=True):
+        if st.button("Iniciar llamada", width="stretch"):
             ahora = datetime.utcnow().isoformat()
 
             api_actualizar(crm_actuacionid, {"hora_inicio": ahora})
@@ -140,7 +140,7 @@ def render_llamada_workflow(supabase, crm_actuacionid: int):
         if crear_seguimiento:
             dias_seg = st.number_input("Dias hasta el seguimiento", 1, 60, 3)
 
-        if st.button("Guardar y finalizar", use_container_width=True):
+        if st.button("Guardar y finalizar", width="stretch"):
 
             ahora = datetime.utcnow()
             inicio_dt = _parse_fecha(hora_inicio)

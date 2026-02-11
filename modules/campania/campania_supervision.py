@@ -144,7 +144,7 @@ def render_supervision(supa):
         st.dataframe(
             actividad[["nombre", "completadas", "pendientes", "minutos"]],
             hide_index=True,
-            use_container_width=True,
+            width="stretch",
         )
 
     st.divider()
@@ -243,7 +243,7 @@ def render_supervision(supa):
                 "Estado": (v.get("crm_actuacion_estado") or {}).get("estado", "—"),
             })
 
-        st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+        st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
 
 
 def _estado_id(supa, nombre: str):

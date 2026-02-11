@@ -27,7 +27,7 @@ def render_escala_precio():
                     "escala_precioid", "tipo", "clienteid", "familia_productoid",
                     "proveedorid", "descuento_pct", "precio_especial", "fecha_inicio", "fecha_fin"
                 ]
-                st.dataframe(df[columnas], use_container_width=True)
+                st.dataframe(df[columnas], width="stretch")
             else:
                 st.info("📭 No hay registros de escala de precios aún.")
         except Exception as e:
@@ -87,7 +87,7 @@ def render_escala_precio():
         # ------------------------------------------------
         # 💾 Guardar
         # ------------------------------------------------
-        if st.button("💾 Guardar nueva escala", use_container_width=True):
+        if st.button("💾 Guardar nueva escala", width="stretch"):
             if not (descuento_pct or precio_especial):
                 st.warning("⚠️ Debes indicar un descuento o un precio especial.")
                 return

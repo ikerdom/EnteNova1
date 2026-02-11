@@ -430,7 +430,7 @@ def render_cliente_potencial_lista():
 
             rows.append(row)
 
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
         opciones = [
             (f"{c.get('razonsocial') or c.get('nombre') or 'Cliente'}", c.get("clienteid"))
             for c in potenciales
@@ -615,7 +615,7 @@ def _render_modal_detalle_potencial(clienteid: int):
 
         colx1, colx2 = st.columns(2)
         with colx1:
-            if st.button("Convertir a cliente", key=f"pot_convert_{clienteid}", use_container_width=True):
+            if st.button("Convertir a cliente", key=f"pot_convert_{clienteid}", width="stretch"):
                 with st.spinner("Convirtiendo..."):
                     res = _api_post(f"/api/clientes/{clienteid}/convertir")
                 if res:
@@ -624,7 +624,7 @@ def _render_modal_detalle_potencial(clienteid: int):
                     modal.close()
                     st.rerun()
         with colx2:
-            if st.button("Cerrar detalle", key=f"cerrar_pot_{clienteid}", use_container_width=True):
+            if st.button("Cerrar detalle", key=f"cerrar_pot_{clienteid}", width="stretch"):
                 st.session_state["pot_detalle_id"] = None
                 modal.close()
                 st.rerun()

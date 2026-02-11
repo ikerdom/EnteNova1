@@ -86,7 +86,7 @@ def render_tarifa_manager():
                         "Habilitada": bool(r.get("habilitada", True)),
                     }
                 )
-            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
     # ---------------------------
     # Crear / asignar
@@ -130,7 +130,7 @@ def render_tarifa_manager():
         elif numero == "5":
             sel_cliente = st.selectbox("Cliente", list(clientes.keys()))
 
-        if st.button("💾 Guardar", type="primary", use_container_width=True):
+        if st.button("💾 Guardar", type="primary", width="stretch"):
             try:
                 if numero == "5":
                     asignar_cliente_tarifa(

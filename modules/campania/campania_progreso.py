@@ -123,7 +123,7 @@ def render():
 
     st.dataframe(
         df_view,
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
     st.caption(f"{len(df_view)} de {total} actuaciones mostradas")

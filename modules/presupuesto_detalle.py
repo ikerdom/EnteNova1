@@ -43,7 +43,7 @@ def anadir_linea_presupuesto(presupuestoid: int):
 
     cantidad = st.number_input("Cantidad", min_value=1.0, step=1.0, value=1.0)
 
-    if st.button("Anadir linea", use_container_width=True):
+    if st.button("Anadir linea", width="stretch"):
         try:
             payload = {
                 "productoid": int(prod["productoid"]),
@@ -114,7 +114,7 @@ def render_presupuesto_detalle(presupuestoid: int, bloqueado: bool = False):
         df = pd.DataFrame(rows)
         for col in ["P. Unit (EUR)", "Base (EUR)", "IVA imp (EUR)", "Total linea (EUR)"]:
             df[col] = df[col].map(lambda x: f"{x:,.2f} EUR" if x is not None else "-")
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(df, width="stretch", hide_index=True)
 
         st.markdown("---")
         c1, c2, c3 = st.columns(3)
@@ -133,7 +133,7 @@ def render_presupuesto_detalle(presupuestoid: int, bloqueado: bool = False):
                         for k, v in por_tarifa.items()
                     ]
                 )
-                st.dataframe(df_tar, use_container_width=True, hide_index=True)
+                st.dataframe(df_tar, width="stretch", hide_index=True)
             else:
                 st.caption("Sin datos de tarifas.")
         with c5:
@@ -142,7 +142,7 @@ def render_presupuesto_detalle(presupuestoid: int, bloqueado: bool = False):
                 df_iva = pd.DataFrame(
                     [{"IVA %": k, "Importe (EUR)": v} for k, v in por_iva.items()]
                 )
-                st.dataframe(df_iva, use_container_width=True, hide_index=True)
+                st.dataframe(df_iva, width="stretch", hide_index=True)
             else:
                 st.caption("Sin datos de IVA.")
 

@@ -277,7 +277,7 @@ def render_crm_acciones(_supabase_unused=None, clienteid: Optional[int] = None):
                 st.write(trab_sel or "-")
                 st.write(f"Cliente: {cliente_sel_id or '-'}")
 
-            enviado = st.form_submit_button("Guardar", use_container_width=True)
+            enviado = st.form_submit_button("Guardar", width="stretch")
 
         if enviado and titulo.strip():
             payload = {
@@ -421,7 +421,7 @@ def render_crm_acciones(_supabase_unused=None, clienteid: Optional[int] = None):
         with st.expander("Posponer accion", expanded=False):
             new_date = st.date_input("Nueva fecha", date.today() + timedelta(days=1), key=f"posp_date_{eid}_{suffix}")
             new_time = st.time_input("Nueva hora", time(9, 0), key=f"posp_time_{eid}_{suffix}")
-            if st.button("Guardar nueva fecha", key=f"btn_posp_{eid}_{suffix}", use_container_width=True):
+            if st.button("Guardar nueva fecha", key=f"btn_posp_{eid}_{suffix}", width="stretch"):
                 api_actualizar(
                     eid,
                     {
@@ -434,7 +434,7 @@ def render_crm_acciones(_supabase_unused=None, clienteid: Optional[int] = None):
                 st.rerun()
 
         with st.expander("Cerrar", expanded=False):
-            if st.button("Cerrar accion", key=f"cerrar_{eid}_{suffix}", use_container_width=True):
+            if st.button("Cerrar accion", key=f"cerrar_{eid}_{suffix}", width="stretch"):
                 st.session_state.pop("crm_accion_abierta", None)
                 st.rerun()
 

@@ -42,7 +42,7 @@ def render_simulador_pedido(_supabase=None):
         st.write("")
         calcular = st.button(
             "🧮 Calcular precio final",
-            use_container_width=True,
+            width="stretch",
             disabled=not (clienteid and productoid),
         )
 

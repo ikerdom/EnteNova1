@@ -140,7 +140,7 @@ def render_tarifa_admin():
         df = pd.DataFrame(rows)
         edited = st.data_editor(
             df,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             disabled=["ID", "Tarifa", "Cliente", "Grupo", "Producto", "Familia", "Desde", "Hasta"],
             key="tabla_tarifas_editor",
@@ -201,7 +201,7 @@ def render_tarifa_admin():
 
                 colA, colB = st.columns(2)
                 with colA:
-                    if st.button("💾 Guardar vigencia", use_container_width=True):
+                    if st.button("💾 Guardar vigencia", width="stretch"):
                         try:
                             actualizar_regla(int(regla_sel), {"fecha_fin": nueva_fin.isoformat()})
                             st.success("✅ Vigencia actualizada.")
@@ -209,7 +209,7 @@ def render_tarifa_admin():
                         except Exception as e:
                             st.error(f"❌ Error guardando: {e}")
                 with colB:
-                    if st.button("🗑️ Eliminar regla", use_container_width=True):
+                    if st.button("🗑️ Eliminar regla", width="stretch"):
                         try:
                             borrar_regla(int(regla_sel))
                             st.success("🗑️ Regla eliminada.")
@@ -272,7 +272,7 @@ def render_tarifa_admin():
     elif numero == "5":
         sel_cliente = st.selectbox("Cliente", list(clientes.keys()))
 
-    if st.button("💾 Guardar asignación", type="primary", use_container_width=True):
+    if st.button("💾 Guardar asignación", type="primary", width="stretch"):
         try:
             if numero == "5":
                 asignar_cliente_tarifa(
