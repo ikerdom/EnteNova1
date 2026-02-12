@@ -2,6 +2,7 @@ from typing import Any, Dict, Optional, List
 
 
 import math
+from datetime import date
 
 
 import pandas as pd
@@ -101,6 +102,45 @@ def _safe(v, d: str = "-"):
 
 
     return v if v not in (None, "", "null") else d
+
+
+@st.cache_data(ttl=900)
+def _cliente_sales_year(clienteid: int, year: int) -> tuple[int, float]:
+    base = _api_base()
+    start = date(year, 1, 1).isoformat()
+    end = date(year + 1, 1, 1).isoformat()
+    total = 0
+    total_imp = 0.0
+    page = 1
+    page_size = 200
+    max_pages = 5
+    while page <= max_pages:
+        try:
+            payload = _api_get_cached(
+                "/api/pedidos",
+                params={
+                    "clienteid": clienteid,
+                    "fecha_desde": start,
+                    "fecha_hasta": end,
+                    "page": page,
+                    "page_size": page_size,
+                },
+            )
+        except Exception:
+            break
+        rows = payload.get("data") or []
+        if not rows:
+            break
+        for p in rows:
+            total += 1
+            try:
+                total_imp += float(p.get("total") or 0)
+            except Exception:
+                pass
+        if len(rows) < page_size:
+            break
+        page += 1
+    return total, total_imp
 
 
 def _ensure_icon_css():
@@ -205,6 +245,11 @@ def _clear_filters():
     st.session_state["cli_f_codcp"] = ""
 
 
+def _clear_cli_compare():
+    st.session_state["cli_compare"] = []
+    st.session_state["cli_compare_mode"] = False
+
+
 def _compare_add(cid: Any, label: str, cif: str):
     items = st.session_state.setdefault("cli_compare", [])
     if any(i["id"] == cid for i in items):
@@ -215,15 +260,26 @@ def _compare_add(cid: Any, label: str, cif: str):
     items.append({"id": cid, "label": label, "cif": cif})
     st.session_state["cli_compare"] = items
     st.session_state["cli_compare_last"] = label
-    if len(items) >= 2:
-        st.session_state["cli_compare_mode"] = True
-        st.session_state["cliente_detalle_id"] = items[0]["id"]
-        st.rerun()
+    _sync_cli_compare_state()
+    st.rerun()
 
 
 def _compare_remove(cid: Any):
     items = st.session_state.get("cli_compare", [])
     st.session_state["cli_compare"] = [i for i in items if i["id"] != cid]
+    _sync_cli_compare_state()
+    st.rerun()
+
+
+def _sync_cli_compare_state():
+    items = st.session_state.get("cli_compare", [])
+    if len(items) >= 2:
+        st.session_state["cli_compare_mode"] = True
+        st.session_state["cliente_detalle_id"] = items[0]["id"]
+        return
+    st.session_state["cli_compare_mode"] = False
+    if len(items) == 1:
+        st.session_state["cliente_detalle_id"] = items[0]["id"]
 
 
 def _on_filter_change():
@@ -270,6 +326,11 @@ def _render_compact_cliente(clienteid: int, label: str):
         kpi1.metric("CIF/DNI", cli.get("cifdni") or "-")
         kpi2.metric("Cuenta", cli.get("codigocuenta") or "-")
         kpi3.metric("Código C/P", cli.get("codigoclienteoproveedor") or "-")
+        year = date.today().year
+        pedidos_year, total_year = _cliente_sales_year(int(cli.get("clienteid") or 0), year) if cli.get("clienteid") else (0, 0.0)
+        kpi4, kpi5 = st.columns(2)
+        kpi4.metric(f"Pedidos {year}", f"{pedidos_year}")
+        kpi5.metric(f"Importe {year}", f"{total_year:,.2f} €".replace(",", "."))
 
 
 def _render_compare_card(data: dict, title: str):
@@ -468,8 +529,8 @@ def render_cliente_lista(API_URL: str):
 
     defaults = {
         "cli_page": 1,
-        "cli_sort_field": "razonsocial",
-        "cli_sort_dir": "ASC",
+        "cli_sort_field": "clienteid",
+        "cli_sort_dir": "DESC",
         "cli_view": "Tarjetas",
         "cli_result_count": 0,
         "cli_table_cols": ["razonsocial", "nombre", "cifdni"],
@@ -541,8 +602,11 @@ def render_cliente_lista(API_URL: str):
     if sel:
         if st.session_state.get("cli_compare_mode"):
             if st.button("Ver ficha completa", key="cli_cmp_full"):
-                st.session_state["cli_compare_mode"] = False
-                st.rerun()
+                if len(st.session_state.get("cli_compare", [])) < 2:
+                    st.session_state["cli_compare_mode"] = False
+                    st.rerun()
+                else:
+                    st.info("Hay 2 o más clientes en comparativa. Quita uno para ver la ficha completa.")
             _render_compare_panel(int(sel))
         else:
             _render_detalle_panel(sel)
@@ -561,9 +625,8 @@ def render_cliente_lista(API_URL: str):
             txt = f"{label}" + (f" · {cif}" if cif else "")
             if cols_cmp[i % len(cols_cmp)].button(f"✕ {txt}", key=f"cmp_rm_{item['id']}"):
                 _compare_remove(item["id"])
-                st.rerun()
         st.caption("Abre un cliente para ver la comparativa izquierda/derecha.")
-        st.button("Limpiar comparativa", key="cmp_clear", on_click=lambda: st.session_state.update({"cli_compare": []}))
+        st.button("Limpiar comparativa", key="cmp_clear", on_click=_clear_cli_compare)
     else:
         st.caption("Selecciona clientes con el botón Comparar en la lista.")
 
@@ -604,7 +667,7 @@ def render_cliente_lista(API_URL: str):
         with f4:
             st.session_state["cli_sort_field"] = st.selectbox(
                 "Ordenar por",
-                ["razonsocial", "nombre", "cifdni", "codigocuenta", "codigoclienteoproveedor"],
+                ["clienteid", "razonsocial", "nombre", "cifdni", "codigocuenta", "codigoclienteoproveedor"],
             )
         with f5:
             st.session_state["cli_sort_dir"] = st.radio(
@@ -615,6 +678,7 @@ def render_cliente_lista(API_URL: str):
 
         if st.session_state["cli_view"] == "Tabla":
             all_cols = [
+                "clienteid",
                 "razonsocial",
                 "nombre",
                 "cifdni",
@@ -682,6 +746,7 @@ def render_cliente_lista(API_URL: str):
             width="stretch",
             hide_index=True,
             column_config={
+                "clienteid": st.column_config.TextColumn("ID"),
                 "razonsocial": st.column_config.TextColumn("Razon social"),
                 "nombre": st.column_config.TextColumn("Nombre"),
                 "cifdni": st.column_config.TextColumn("CIF/DNI"),
@@ -857,6 +922,11 @@ def _render_detalle_panel(clienteid: int):
             kpi1.metric("CIF/DNI", cli.get("cifdni") or "-")
             kpi2.metric("Cuenta", cli.get("codigocuenta") or "-")
             kpi3.metric("Código C/P", cli.get("codigoclienteoproveedor") or "-")
+            year = date.today().year
+            ped_y, imp_y = _cliente_sales_year(int(clienteid), year)
+            kpi4, kpi5 = st.columns(2)
+            kpi4.metric(f"Pedidos {year}", f"{ped_y}")
+            kpi5.metric(f"Importe {year}", f"{imp_y:,.2f} €".replace(",", "."))
 
             st.markdown("### Datos principales")
             left, right = st.columns(2)

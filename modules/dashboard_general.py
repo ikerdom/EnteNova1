@@ -3,6 +3,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta, date
+from typing import Optional
 import requests
 
 from modules.orbe_palette import PRIMARY, PRIMARY_DARK, SUCCESS, WARNING, DANGER, SECONDARY, LIGHT, TEXT
@@ -115,6 +116,160 @@ def _load_pedidos_api(fecha_desde: date, page_size: int = 500) -> list:
         return []
 
 
+def _pick_pedido_fecha(p: dict) -> Optional[str]:
+    return (
+        p.get("updated_on")
+        or p.get("updated_at")
+        or p.get("created_on")
+        or p.get("created_at")
+        or p.get("fecha_pedido")
+    )
+
+
+def _month_window(base_day: date, months_back: int = 0) -> tuple[date, date]:
+    year = base_day.year
+    month = base_day.month - months_back
+    while month <= 0:
+        month += 12
+        year -= 1
+    start = date(year, month, 1)
+    if month == 12:
+        end = date(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        end = date(year, month + 1, 1) - timedelta(days=1)
+    return start, end
+
+
+def _set_menu_and_filters(menu: str, filters: dict):
+    st.session_state["menu_principal"] = menu
+    st.session_state.update(filters)
+    st.rerun()
+
+
+def _week_window(base_day: date, weeks_back: int = 0) -> tuple[date, date]:
+    start = base_day - timedelta(days=base_day.weekday()) - timedelta(weeks=weeks_back)
+    end = start + timedelta(days=6)
+    return start, end
+
+
+def _pick_pres_fecha(p: dict) -> Optional[str]:
+    return p.get("created_at") or p.get("fecha_presupuesto") or p.get("fecha")
+
+
+def _count_pedidos_window(rows: list, start: date, end: date) -> tuple[int, float, int]:
+    total = 0
+    total_imp = 0.0
+    conv = 0
+    for p in rows:
+        raw = _pick_pedido_fecha(p)
+        if not raw:
+            continue
+        try:
+            d = pd.to_datetime(raw).date()
+        except Exception:
+            continue
+        if d < start or d > end:
+            continue
+        total += 1
+        try:
+            total_imp += float(p.get("total") or 0)
+        except Exception:
+            pass
+        if (p.get("pedido_procedencia") or "").lower() == "presupuesto":
+            conv += 1
+    return total, total_imp, conv
+
+
+def _count_pres_window(rows: list, start: date, end: date) -> int:
+    total = 0
+    for p in rows:
+        raw = _pick_pres_fecha(p)
+        if not raw:
+            continue
+        try:
+            d = pd.to_datetime(raw).date()
+        except Exception:
+            continue
+        if d < start or d > end:
+            continue
+        total += 1
+    return total
+
+
+def _count_pres_updated_window(rows: list, start: date, end: date, accepted: set[str]) -> tuple[int, int]:
+    total = 0
+    accepted_cnt = 0
+    for p in rows:
+        raw = p.get("updated_at") or p.get("updated_on") or _pick_pres_fecha(p)
+        if not raw:
+            continue
+        try:
+            d = pd.to_datetime(raw).date()
+        except Exception:
+            continue
+        if d < start or d > end:
+            continue
+        total += 1
+        estado = (p.get("estado") or "").strip()
+        if estado in accepted:
+            accepted_cnt += 1
+    return total, accepted_cnt
+
+
+def _count_pedidos_updated_window(rows: list, start: date, end: date, accepted: set[str]) -> tuple[int, int]:
+    total = 0
+    accepted_cnt = 0
+    for p in rows:
+        raw = p.get("updated_on") or p.get("updated_at") or _pick_pedido_fecha(p)
+        if not raw:
+            continue
+        try:
+            d = pd.to_datetime(raw).date()
+        except Exception:
+            continue
+        if d < start or d > end:
+            continue
+        total += 1
+        estado = (p.get("pedido_estado_nombre") or "").strip()
+        if estado in accepted:
+            accepted_cnt += 1
+    return total, accepted_cnt
+
+
+def _load_producto_sales_year(supabase, year: int, page_size: int = 1000, max_pages: int = 20) -> dict:
+    if not supabase or not _table_exists(supabase, "pedido_linea"):
+        return {}
+    start = date(year, 1, 1).isoformat()
+    end = date(year + 1, 1, 1).isoformat()
+    out: dict[int, dict] = {}
+    page = 0
+    while page < max_pages:
+        start_i = page * page_size
+        end_i = start_i + page_size - 1
+        res = (
+            supabase.table("pedido_linea")
+            .select("producto_id,cantidad,subtotal,created_at")
+            .gte("created_at", start)
+            .lt("created_at", end)
+            .range(start_i, end_i)
+            .execute()
+        )
+        rows = res.data or []
+        if not rows:
+            break
+        for r in rows:
+            pid = r.get("producto_id")
+            if not pid:
+                continue
+            qty = float(r.get("cantidad") or 0)
+            subtotal = float(r.get("subtotal") or 0)
+            acc = out.setdefault(int(pid), {"qty": 0.0, "total": 0.0})
+            acc["qty"] += qty
+            acc["total"] += subtotal
+        page += 1
+    return out
+
+
 def _load_activity_api(fecha_inicio_30: date):
     """
     Fallback de actividad cuando no hay supabase: usa las APIs públicas.
@@ -137,7 +292,7 @@ def _load_activity_api(fecha_inicio_30: date):
         r_pres.raise_for_status()
         pres = [
             p for p in r_pres.json().get("data", [])
-            if (p.get("fecha_presupuesto") or p.get("fecha") or "") >= fecha_inicio_30.isoformat()
+            if (p.get("created_at") or p.get("fecha_presupuesto") or p.get("fecha") or "") >= fecha_inicio_30.isoformat()
         ]
     except Exception:
         pres = []
@@ -158,7 +313,7 @@ def _load_activity_api(fecha_inicio_30: date):
 def _load_presupuestos_recientes(supabase, fecha_inicio_30: date) -> list:
     if not supabase or not _table_exists(supabase, "presupuesto"):
         return []
-    for field in ("fecha_presupuesto", "fecha"):
+    for field in ("created_at", "fecha_presupuesto", "fecha"):
         try:
             return (
                 supabase.table("presupuesto")
@@ -333,9 +488,74 @@ def render_dashboard(supabase):
             )
         else:
             incs = "-"
-        _kpi_card("Incidencias abiertas", incs, color=DANGER)
+    _kpi_card("Incidencias abiertas", incs, color=DANGER)
 
     st.markdown("---")
+
+    # ------------------------------------------------------
+    # Accesos rapidos (hoy / semana)
+    # ------------------------------------------------------
+    semana_ini = hoy - timedelta(days=hoy.weekday())
+    try:
+        ped_week = _load_pedidos_api(semana_ini)
+    except Exception:
+        ped_week = []
+    try:
+        if supabase and _table_exists(supabase, "presupuesto"):
+            pres_week = _load_presupuestos_recientes(supabase, semana_ini)
+        else:
+            _, pres_week, _ = _load_activity_api(semana_ini)
+    except Exception:
+        pres_week = []
+
+    def _count_today(rows, pick_fn):
+        total = 0
+        for r in rows:
+            raw = pick_fn(r)
+            if not raw:
+                continue
+            try:
+                if pd.to_datetime(raw).date() == hoy:
+                    total += 1
+            except Exception:
+                continue
+        return total
+
+    pres_hoy = _count_today(pres_week, lambda r: r.get("created_at") or r.get("fecha_presupuesto") or r.get("fecha"))
+    ped_hoy = _count_today(ped_week, _pick_pedido_fecha)
+
+    st.subheader("Accesos rápidos")
+    r1, r2, r3, r4 = st.columns(4)
+    r1.metric("Presupuestos hoy", pres_hoy)
+    r2.metric("Presupuestos semana", len(pres_week))
+    r3.metric("Pedidos hoy", ped_hoy)
+    r4.metric("Pedidos semana", len(ped_week))
+
+    b1, b2, b3, b4 = st.columns(4)
+    b1.button(
+        "Ver presupuestos hoy",
+        width="stretch",
+        on_click=_set_menu_and_filters,
+        args=("💼 Gestion de presupuestos", {"pres_from": hoy, "pres_to": hoy, "pres_page": 1}),
+    )
+    b2.button(
+        "Ver presupuestos semana",
+        width="stretch",
+        on_click=_set_menu_and_filters,
+        args=("💼 Gestion de presupuestos", {"pres_from": semana_ini, "pres_to": hoy, "pres_page": 1}),
+    )
+    b3.button(
+        "Ver pedidos hoy",
+        width="stretch",
+        on_click=_set_menu_and_filters,
+        args=("🧾 Gestion de pedidos", {"pedido_from": hoy, "pedido_to": hoy, "pedido_page": 1}),
+    )
+    b4.button(
+        "Ver pedidos semana",
+        width="stretch",
+        on_click=_set_menu_and_filters,
+        args=("🧾 Gestion de pedidos", {"pedido_from": semana_ini, "pedido_to": hoy, "pedido_page": 1}),
+    )
 
     # ------------------------------------------------------
     # ------------------------------------------------------
@@ -419,6 +639,9 @@ def render_dashboard(supabase):
     except Exception as e:
         st.error(f"No se pudieron cargar las actuaciones: {e}")
         acts = []
+
+    if not acts:
+        st.info("No hay actuaciones CRM registradas.")
 
     # ------------------------------------------------------
     # Cargar nombres de clientes
@@ -512,6 +735,131 @@ def render_dashboard(supabase):
     # 3️⃣ ACTIVIDAD · GRÁFICAS
     # ------------------------------------------------------
     st.subheader("📈 Actividad y pedidos")
+    # Resumen semanal: semana actual vs anterior
+    sem_cur_start, sem_cur_end = _week_window(hoy, 0)
+    sem_prev_start, sem_prev_end = _week_window(hoy, 1)
+    ped_2w = _load_pedidos_api(sem_prev_start, page_size=1000)
+    if supabase and _table_exists(supabase, "presupuesto"):
+        pres_2w = _load_presupuestos_recientes(supabase, sem_prev_start)
+    else:
+        _, pres_2w, _ = _load_activity_api(sem_prev_start)
+
+    ped_prev_cnt, ped_prev_imp, ped_prev_conv = _count_pedidos_window(ped_2w, sem_prev_start, sem_prev_end)
+    ped_cur_cnt, ped_cur_imp, ped_cur_conv = _count_pedidos_window(ped_2w, sem_cur_start, sem_cur_end)
+    pres_prev_cnt = _count_pres_window(pres_2w, sem_prev_start, sem_prev_end)
+    pres_cur_cnt = _count_pres_window(pres_2w, sem_cur_start, sem_cur_end)
+
+    accepted_pres = {"Vigente", "Aprobado"}
+    accepted_ped = {"Aprobado", "Expedido", "Completado", "Facturado"}
+    pres_prev_upd, pres_prev_acc = _count_pres_updated_window(pres_2w, sem_prev_start, sem_prev_end, accepted_pres)
+    pres_cur_upd, pres_cur_acc = _count_pres_updated_window(pres_2w, sem_cur_start, sem_cur_end, accepted_pres)
+    ped_prev_upd, ped_prev_acc = _count_pedidos_updated_window(ped_2w, sem_prev_start, sem_prev_end, accepted_ped)
+    ped_cur_upd, ped_cur_acc = _count_pedidos_updated_window(ped_2w, sem_cur_start, sem_cur_end, accepted_ped)
+
+    st.markdown("### Comparativa semanal (actual vs anterior)")
+    w1, w2, w3, w4 = st.columns(4)
+    w1.metric("Pedidos semana actual", ped_cur_cnt)
+    w2.metric("Pedidos semana anterior", ped_prev_cnt)
+    w3.metric("Presupuestos semana actual", pres_cur_cnt)
+    w4.metric("Presupuestos semana anterior", pres_prev_cnt)
+
+    df_week = pd.DataFrame(
+        [
+            {
+                "Semana": sem_prev_start.strftime("%Y-%m-%d"),
+                "Pedidos": ped_prev_cnt,
+                "Importe": ped_prev_imp,
+                "Presupuestos": pres_prev_cnt,
+                "Pres.→Pedidos": ped_prev_conv,
+            },
+            {
+                "Semana": sem_cur_start.strftime("%Y-%m-%d"),
+                "Pedidos": ped_cur_cnt,
+                "Importe": ped_cur_imp,
+                "Presupuestos": pres_cur_cnt,
+                "Pres.→Pedidos": ped_cur_conv,
+            },
+        ]
+    ).set_index("Semana")
+    st.bar_chart(df_week[["Pedidos", "Presupuestos", "Pres.→Pedidos"]], height=220)
+    st.caption("Importe total mostrado en métricas y disponible en el detalle semanal.")
+    st.markdown("#### Actualizados en la semana (por updated_at)")
+    u1, u2, u3, u4 = st.columns(4)
+    u1.metric("Pedidos actualizados (sem. actual)", ped_cur_upd)
+    u2.metric("Pedidos aceptados (sem. actual)", ped_cur_acc)
+    u3.metric("Presupuestos actualizados (sem. actual)", pres_cur_upd)
+    u4.metric("Presupuestos aceptados (sem. actual)", pres_cur_acc)
+
+    u5, u6, u7, u8 = st.columns(4)
+    u5.metric("Pedidos actualizados (sem. anterior)", ped_prev_upd)
+    u6.metric("Pedidos aceptados (sem. anterior)", ped_prev_acc)
+    u7.metric("Presupuestos actualizados (sem. anterior)", pres_prev_upd)
+    u8.metric("Presupuestos aceptados (sem. anterior)", pres_prev_acc)
+
+    st.markdown("#### Creado vs actualizado (comparativa)")
+    df_cmp = pd.DataFrame(
+        [
+            {
+                "Semana": sem_prev_start.strftime("%Y-%m-%d"),
+                "Pedidos creados": ped_prev_cnt,
+                "Pedidos actualizados": ped_prev_upd,
+                "Presupuestos creados": pres_prev_cnt,
+                "Presupuestos actualizados": pres_prev_upd,
+            },
+            {
+                "Semana": sem_cur_start.strftime("%Y-%m-%d"),
+                "Pedidos creados": ped_cur_cnt,
+                "Pedidos actualizados": ped_cur_upd,
+                "Presupuestos creados": pres_cur_cnt,
+                "Presupuestos actualizados": pres_cur_upd,
+            },
+        ]
+    ).set_index("Semana")
+    st.bar_chart(df_cmp, height=240)
+
+    # ------------------------------------------------------
+    # Top productos (2025 vs 2024)
+    # ------------------------------------------------------
+    st.markdown("### Top 10 productos vendidos (2025 vs 2024)")
+    if not supabase or not _table_exists(supabase, "pedido_linea"):
+        st.info("Conecta Supabase para ver el top de productos vendidos.")
+    else:
+        sales_2025 = _load_producto_sales_year(supabase, 2025)
+        sales_2024 = _load_producto_sales_year(supabase, 2024)
+
+        top_2025 = sorted(sales_2025.items(), key=lambda x: x[1]["qty"], reverse=True)[:10]
+        if not top_2025:
+            st.caption("Sin ventas de productos en 2025.")
+        else:
+            prod_ids = [pid for pid, _ in top_2025]
+            prod_rows = (
+                supabase.table("producto")
+                .select("catalogo_productoid, titulo_automatico, idproducto")
+                .in_("catalogo_productoid", prod_ids)
+                .execute()
+                .data
+                or []
+            )
+            prod_map = {
+                int(p.get("catalogo_productoid")): (p.get("titulo_automatico") or p.get("idproducto") or f"Producto {p.get('catalogo_productoid')}")
+                for p in prod_rows
+                if p.get("catalogo_productoid") is not None
+            }
+            rows = []
+            for pid, data in top_2025:
+                y24 = sales_2024.get(pid)
+                rows.append(
+                    {
+                        "Producto": prod_map.get(pid, f"Producto {pid}"),
+                        "2025 Cantidad": f"{data['qty']:.0f}",
+                        "2025 Total": f"{data['total']:.2f} €",
+                        "2024 Cantidad": f"{y24['qty']:.0f}" if y24 else "No existía",
+                        "2024 Total": f"{y24['total']:.2f} €" if y24 else "No existía",
+                    }
+                )
+            df_top = pd.DataFrame(rows)
+            st.dataframe(df_top, hide_index=True, width="stretch")
+
     tab_act, tab_ped = st.tabs(["Actividad 30 días", "Pedidos"])
     colA, colB = tab_act.columns(2)
 
@@ -528,11 +876,11 @@ def render_dashboard(supabase):
 
             records = []
             for p in ped or []:
-                fecha = p.get("fecha_pedido")
+                fecha = _pick_pedido_fecha(p)
                 if fecha:
                     records.append({"fecha": pd.to_datetime(fecha).date(), "tipo": "Pedidos"})
             for p in pres or []:
-                fecha = p.get("fecha_presupuesto") or p.get("fecha")
+                fecha = p.get("created_at") or p.get("fecha_presupuesto") or p.get("fecha")
                 if fecha:
                     records.append({"fecha": pd.to_datetime(fecha).date(), "tipo": "Presupuestos"})
             for a in acts30 or []:
@@ -643,10 +991,52 @@ def render_dashboard(supabase):
             k2.metric("Importe total", f"{total_importe:,.2f} €".replace(",", "."))
             k3.metric("Ticket medio", f"{(total_importe / total_ped) if total_ped else 0:,.2f} €".replace(",", "."))
 
+            # COM vs VEN (mes actual y anterior)
+            st.markdown("### COM vs VEN (mes actual y anterior)")
+            start_prev, end_prev = _month_window(hoy, 1)
+            start_cur, end_cur = _month_window(hoy, 0)
+            ped_2m = _load_pedidos_api(start_prev, page_size=1000)
+
+            def _count_tipodoc(rows: list, start: date, end: date) -> tuple[int, int]:
+                com = 0
+                ven = 0
+                for p in rows:
+                    fecha_raw = _pick_pedido_fecha(p)
+                    if not fecha_raw:
+                        continue
+                    try:
+                        d = pd.to_datetime(fecha_raw).date()
+                    except Exception:
+                        continue
+                    if d < start or d > end:
+                        continue
+                    tip = (p.get("tipodoc") or "").upper()
+                    if not tip:
+                        t_id = p.get("pedido_tipo_documentoid")
+                        if t_id == 8:
+                            tip = "COM"
+                        elif t_id == 9:
+                            tip = "VEN"
+                    if tip == "COM":
+                        com += 1
+                    elif tip == "VEN":
+                        ven += 1
+                return com, ven
+
+            com_prev, ven_prev = _count_tipodoc(ped_2m, start_prev, end_prev)
+            com_cur, ven_cur = _count_tipodoc(ped_2m, start_cur, end_cur)
+            df_doc = pd.DataFrame(
+                [
+                    {"Mes": start_prev.strftime("%Y-%m"), "COM": com_prev, "VEN": ven_prev},
+                    {"Mes": start_cur.strftime("%Y-%m"), "COM": com_cur, "VEN": ven_cur},
+                ]
+            ).set_index("Mes")
+            st.bar_chart(df_doc, height=220)
+
             # Evolución diaria
             rows = []
             for p in ped_30:
-                fecha = p.get("fecha_pedido")
+                fecha = _pick_pedido_fecha(p)
                 if fecha:
                     rows.append({"fecha": pd.to_datetime(fecha).date(), "total": float(p.get("total") or 0)})
             dfp = pd.DataFrame(rows)

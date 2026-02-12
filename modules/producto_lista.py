@@ -104,6 +104,11 @@ def _clear_prod_filters():
     st.session_state["prod_page"] = 1
 
 
+def _clear_prod_compare():
+    st.session_state["prod_compare"] = []
+    st.session_state["prod_compare_mode"] = False
+
+
 def _prod_compare_add(pid: Any, label: str):
     items = st.session_state.setdefault("prod_compare", [])
     if any(i["id"] == pid for i in items):
@@ -114,15 +119,26 @@ def _prod_compare_add(pid: Any, label: str):
     items.append({"id": pid, "label": label})
     st.session_state["prod_compare"] = items
     st.session_state["prod_compare_last"] = label
-    if len(items) >= 2:
-        st.session_state["prod_compare_mode"] = True
-        st.session_state["prod_detalle_id"] = items[0]["id"]
-        st.rerun()
+    _sync_prod_compare_state()
+    st.rerun()
 
 
 def _prod_compare_remove(pid: Any):
     items = st.session_state.get("prod_compare", [])
     st.session_state["prod_compare"] = [i for i in items if i["id"] != pid]
+    _sync_prod_compare_state()
+    st.rerun()
+
+
+def _sync_prod_compare_state():
+    items = st.session_state.get("prod_compare", [])
+    if len(items) >= 2:
+        st.session_state["prod_compare_mode"] = True
+        st.session_state["prod_detalle_id"] = items[0]["id"]
+        return
+    st.session_state["prod_compare_mode"] = False
+    if len(items) == 1:
+        st.session_state["prod_detalle_id"] = items[0]["id"]
 
 
 @st.cache_data(ttl=120)
@@ -139,7 +155,7 @@ def _fetch_producto_detalle(productoid: int) -> dict:
     return _fetch_producto_detalle_cached(productoid)
 
 
-def _render_compare_card_producto(data: dict, title: str):
+def _render_compare_card_producto(data: dict, title: str, sales_year: tuple[float, float] | None = None):
     p = data.get("producto", data)
     nombre = p.get("titulo_automatico") or title
     portada = (p.get("portada_url") or "").strip()
@@ -182,9 +198,12 @@ def _render_compare_card_producto(data: dict, title: str):
             d10, d11 = st.columns(2)
             d10.write(f"**Tipo producto:** {p.get('tipo_producto') or '-'}")
             d11.write(f"**Categoría raíz:** {p.get('categoria_raiz') or '-'}")
+        if sales_year:
+            qty, total = sales_year
+            st.caption(f"Ventas año actual: {qty:,.0f} · Importe: {total:,.2f} €".replace(",", "."))
 
 
-def _render_compare_panel_producto(main_productoid: int):
+def _render_compare_panel_producto(main_productoid: int, supabase=None):
     compare_items = [i for i in st.session_state.get("prod_compare", []) if i["id"] != main_productoid]
     st.markdown("---")
     st.subheader("Vista comparativa")
@@ -265,7 +284,13 @@ def _render_compare_panel_producto(main_productoid: int):
             if data.get("_error"):
                 st.error(f"Error cargando detalle: {data['_error']}")
                 continue
-            _render_compare_card_producto(data, item["label"])
+            sales_year = None
+            if supabase:
+                try:
+                    sales_year = _producto_sales_year(supabase, int(item["id"]), date.today().year)
+                except Exception:
+                    sales_year = None
+            _render_compare_card_producto(data, item["label"], sales_year)
     if extra_payloads:
         st.markdown("---")
         st.caption("Más productos añadidos")
@@ -273,7 +298,13 @@ def _render_compare_panel_producto(main_productoid: int):
             if data.get("_error"):
                 st.error(f"Error cargando detalle: {data['_error']}")
                 continue
-            _render_compare_card_producto(data, item["label"])
+            sales_year = None
+            if supabase:
+                try:
+                    sales_year = _producto_sales_year(supabase, int(item["id"]), date.today().year)
+                except Exception:
+                    sales_year = None
+            _render_compare_card_producto(data, item["label"], sales_year)
 
 
 def _chunked(items: Sequence[int], size: int = 200) -> Iterable[List[int]]:
@@ -359,6 +390,74 @@ def _load_pedido_lineas_for_producto(supa, product_id: int, since: date) -> List
     return res.data or []
 
 
+@st.cache_data(ttl=900)
+def _producto_sales_year(supa, product_id: int, year: int) -> tuple[float, float]:
+    start = date(year, 1, 1).isoformat()
+    end = date(year + 1, 1, 1).isoformat()
+    rows: List[dict] = []
+    page = 0
+    page_size = 1000
+    while page < 10:
+        start_i = page * page_size
+        end_i = start_i + page_size - 1
+        q = (
+            supa.table("pedido_linea")
+            .select("cantidad, subtotal, created_at, producto_id, producto_ref_origen")
+            .gte("created_at", start)
+            .lt("created_at", end)
+            .range(start_i, end_i)
+        )
+        try:
+            q = q.or_(f"producto_id.eq.{product_id},producto_ref_origen.eq.{product_id}")
+            res = q.execute()
+        except Exception:
+            res = q.eq("producto_id", product_id).execute()
+        data = res.data or []
+        if not data:
+            break
+        rows.extend(data)
+        page += 1
+    qty = sum(float(r.get("cantidad") or 0) for r in rows)
+    total = sum(float(r.get("subtotal") or 0) for r in rows)
+    return qty, total
+
+
+@st.cache_data(ttl=900)
+def _producto_sales_last_12m(supa, product_ids: List[int]) -> Dict[int, Tuple[float, float]]:
+    if not supa or not product_ids:
+        return {}
+    since = (date.today() - timedelta(days=365)).isoformat()
+    sales: Dict[int, Tuple[float, float]] = {pid: (0.0, 0.0) for pid in product_ids}
+    for chunk in _chunked(product_ids, size=200):
+        ids_csv = ",".join(str(i) for i in chunk)
+        q = (
+            supa.table("pedido_linea")
+            .select("producto_id, producto_ref_origen, cantidad, subtotal, created_at")
+            .gte("created_at", since)
+        )
+        try:
+            q = q.or_(f"producto_id.in.({ids_csv}),producto_ref_origen.in.({ids_csv})")
+            res = q.execute()
+        except Exception:
+            try:
+                res = q.in_("producto_id", chunk).execute()
+            except Exception as e:
+                st.warning(f"No se pudieron cargar ventas 12m: {e}")
+                continue
+        for r in res.data or []:
+            pid = r.get("producto_id") or r.get("producto_ref_origen")
+            if pid is None:
+                continue
+            pid = int(pid)
+            if pid not in sales:
+                continue
+            qty, total = sales.get(pid, (0.0, 0.0))
+            qty += float(r.get("cantidad") or 0)
+            total += float(r.get("subtotal") or 0)
+            sales[pid] = (qty, total)
+    return sales
+
+
 # ======================================================
 # LISTA DE PRODUCTOS (UI -> FastAPI)
 # ======================================================
@@ -416,8 +515,8 @@ def render_producto_lista(supabase=None):
     # estado UI
     defaults = {
         "prod_page": 1,
-        "prod_sort_field": "titulo_automatico",
-        "prod_sort_dir": "ASC",
+        "prod_sort_field": "ventas_12m",
+        "prod_sort_dir": "DESC",
         "prod_view": "Tarjetas",
         "prod_result_count": 0,
         "prod_table_cols": ["catalogo_productoid", "titulo_automatico", "idproducto", "idproductoreferencia", "familia", "tipo", "categoria", "isbn", "ean", "pvp"],
@@ -454,7 +553,10 @@ def render_producto_lista(supabase=None):
         f1, f2, f3 = st.columns(3)
         with f1:
             st.session_state["prod_view"] = st.radio("Vista", ["Tarjetas", "Tabla"], horizontal=True)
-            st.session_state["prod_sort_field"] = st.selectbox("Ordenar por", ["titulo_automatico", "idproducto", "idproductoreferencia", "isbn", "ean", "pvp"])
+            st.session_state["prod_sort_field"] = st.selectbox(
+                "Ordenar por",
+                ["ventas_12m", "titulo_automatico", "idproducto", "idproductoreferencia", "isbn", "ean", "pvp"],
+            )
             st.session_state["prod_sort_dir"] = st.radio("Direccion", ["ASC", "DESC"], horizontal=True)
         with f2:
             st.session_state["prod_f_titulo"] = st.text_input(
@@ -506,12 +608,11 @@ def render_producto_lista(supabase=None):
             label = item["label"]
             if cols_cmp[i % len(cols_cmp)].button(f"✕ {label}", key=f"prod_cmp_rm_{item['id']}"):
                 _prod_compare_remove(item["id"])
-                st.rerun()
         if len(compare_items) == 1:
             st.caption("Comparativa pendiente: elige otro producto.")
         else:
             st.caption("Abre un producto para ver la comparativa izquierda/derecha.")
-        st.button("Limpiar comparativa", key="prod_cmp_clear", on_click=lambda: st.session_state.update({"prod_compare": []}))
+        st.button("Limpiar comparativa", key="prod_cmp_clear", on_click=_clear_prod_compare)
     else:
         st.caption("Selecciona productos con el botón Comparar en la lista.")
         if st.session_state["prod_view"] == "Tabla":
@@ -534,7 +635,7 @@ def render_producto_lista(supabase=None):
             )
             st.session_state["prod_sort_field"] = st.selectbox(
                 "Ordenar tabla por",
-                options=st.session_state["prod_table_cols"] or all_cols,
+                options=["ventas_12m"] + (st.session_state["prod_table_cols"] or all_cols),
                 key="prod_sort_field_table",
             )
             st.session_state["prod_sort_dir"] = st.radio(
@@ -547,12 +648,17 @@ def render_producto_lista(supabase=None):
     # Params API
     page = st.session_state["prod_page"]
     page_size = 30
+    sort_field = st.session_state["prod_sort_field"]
+    sort_dir = st.session_state["prod_sort_dir"]
+    if sort_field == "ventas_12m":
+        sort_field = "titulo_automatico"
+        sort_dir = "ASC"
     params = {
         "q": q or None,
         "page": page,
         "page_size": page_size,
-        "sort_field": st.session_state["prod_sort_field"],
-        "sort_dir": st.session_state["prod_sort_dir"],
+        "sort_field": sort_field,
+        "sort_dir": sort_dir,
     }
     fam_sel = st.session_state.get("prod_familia")
     if fam_sel and fam_sel != "Todas":
@@ -585,8 +691,11 @@ def render_producto_lista(supabase=None):
     if sel:
         if st.session_state.get("prod_compare_mode"):
             if st.button("Ver ficha completa", key="prod_cmp_full"):
-                st.session_state["prod_compare_mode"] = False
-                st.rerun()
+                if len(st.session_state.get("prod_compare", [])) < 2:
+                    st.session_state["prod_compare_mode"] = False
+                    st.rerun()
+                else:
+                    st.info("Hay 2 o más productos en comparativa. Quita uno para ver la ficha completa.")
             _render_compare_panel_producto(int(sel))
         else:
             _render_modal_producto(sel, supabase or st.session_state.get("supa"))
@@ -595,6 +704,20 @@ def render_producto_lista(supabase=None):
     if not productos:
         st.info("No hay productos con esos filtros.")
         return
+
+    if st.session_state["prod_sort_field"] == "ventas_12m":
+        supa = supabase or st.session_state.get("supa")
+        ids = [int(p.get("catalogo_productoid")) for p in productos if p.get("catalogo_productoid") is not None]
+        sales_map = _producto_sales_last_12m(supa, ids) if ids else {}
+
+        def _sales_qty(p: dict) -> float:
+            pid = p.get("catalogo_productoid")
+            if pid is None:
+                return 0.0
+            return float(sales_map.get(int(pid), (0.0, 0.0))[0])
+
+        reverse = st.session_state["prod_sort_dir"] == "DESC"
+        productos.sort(key=_sales_qty, reverse=reverse)
 
     if st.session_state["prod_view"] == "Tarjetas":
         cols = st.columns(3)
@@ -784,6 +907,15 @@ def _render_modal_producto(productoid: int, supabase=None):
         st.markdown("**Descripción**")
         st.write(p.get("descripcion") or "Sin descripción.")
 
+        if supabase:
+            year = date.today().year
+            qty_y, total_y = _producto_sales_year(supabase, int(productoid), year)
+            qty_prev, total_prev = _producto_sales_year(supabase, int(productoid), year - 1)
+            s1, s2, s3 = st.columns(3)
+            s1.metric(f"Ventas {year}", f"{qty_y:,.0f}".replace(",", "."))
+            s2.metric(f"Importe {year}", f"{total_y:,.2f} €".replace(",", "."))
+            s3.metric(f"Ventas {year-1}", f"{qty_prev:,.0f}".replace(",", "."))
+
     st.markdown("### Ventas en pedidos")
     if not supabase:
         st.info("Conecta Supabase para ver métricas de ventas.")
@@ -826,6 +958,6 @@ def _render_modal_producto(productoid: int, supabase=None):
         st.session_state.update({"prod_detalle_id": None, "prod_compare_mode": False})
         st.rerun()
 
-    _render_compare_panel_producto(productoid)
+    _render_compare_panel_producto(productoid, supabase)
 
 
